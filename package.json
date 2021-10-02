@@ -1,0 +1,17 @@
+{
+  "name": "tapo",
+  "version": "1.3.0",
+  "description": "a tiny and simple entity mapper for frontend. inspired by typeorm",
+  "main": "./dist/index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [],
+  "author": "victan@qq.com",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/cli": "^7.15.7",
+    "@babel/core": "^7.15.5",
+    "@babel/preset-env": "^7.15.6"
+  }
+}
