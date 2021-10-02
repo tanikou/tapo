@@ -25,7 +25,7 @@ export default class Named extends Model {
 
 example 1:
 ```
-const entity = new Named({ name: 'Tapo', date: new Date() })
+new Named({ name: 'Tapo', date: new Date() })
 ```
 get result
 ```
@@ -34,7 +34,7 @@ Named {name: "Tapo"}
 
 example 2: `attr not match`
 ```
-const entity = new Named({ date: new Date() })
+new Named({ date: new Date() })
 ```
 get result
 ```
