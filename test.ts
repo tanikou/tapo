@@ -12,7 +12,7 @@ export default class Named extends Model {
 }
 
 @Entity()
-export default class Tapo extends Named {
+export default class Staff extends Named {
   constructor (source?: Record<string, unknown>) {
     super()
     this.parse(source)
@@ -35,4 +35,4 @@ export default class Tapo extends Named {
   year = ''
 }
 
-console.log(new Tapo({ name: 'Tapo Mapper', author: { name: 'tan' }, birthday: new Date() }))
+console.log(new Staff({ name: 'Tapo Mapper', author: { name: 'tan' }, birthday: new Date() }))

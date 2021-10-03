@@ -57,7 +57,7 @@ Error: Named.name: undefined is not "String"
 import { Entity, Model, type, from, nullable, format, validator } from 'tapo'
 
 @Entity()
-export default class Tapo extends Named {
+export default class Staff extends Named {
   constructor (source) {
     super()
     this.parse(source)
@@ -80,12 +80,12 @@ export default class Tapo extends Named {
   year = ''
 }
 
-new Tapo({
+new Staff({
   name: 'Tapo Mapper',
   author: { name: 'tan' },
   birthday: new Date()
 })
 ```
 ```
-Tapo { name: 'Tapo Mapper', author: 'tan', email: '', year: 2021 }
+Staff { name: 'Tapo Mapper', author: 'tan', email: '', year: 2021 }
 ```

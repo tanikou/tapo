@@ -1,6 +1,6 @@
 {
   "name": "tapo",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "a tiny and simple entity mapper for frontend. inspired by typeorm",
   "homepage": "https://github.com/tanikou/tapo",
   "main": "./dist/index.js",
