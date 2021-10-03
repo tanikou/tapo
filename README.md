@@ -105,7 +105,7 @@ import Staff from '@/entity/Staff'
 
 export default defineComponent({
   props: {
-    token: {
+    staff: {
       type: Staff
     }
   }
