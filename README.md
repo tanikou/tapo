@@ -89,3 +89,26 @@ new Staff({
 ```
 Staff { name: 'Tapo Mapper', author: 'tan', email: '', year: 2021 }
 ```
+
+
+# use as vue component props type
+```
+<template>
+  <div>
+    {{ staff }}
+  </div>
+</template>
+
+<script lang="ts">
+import { defineComponent } from 'vue'
+import Staff from '@/entity/Staff'
+
+export default defineComponent({
+  props: {
+    token: {
+      type: Staff
+    }
+  }
+})
+</script>
+```
