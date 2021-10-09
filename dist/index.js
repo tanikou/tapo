@@ -152,20 +152,20 @@ class Model {
         if (rules.enumeration) {
             // 判断枚举类型是否匹配
             if (!rules.enumeration.includes(value)) {
-                throw new Error(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.enumeration.join(', ')).replace('{value}', value));
+                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.enumeration.join(', ')).replace('{value}', value));
             }
         }
         else if (Array.isArray(rules.type)) {
             // 判断数据类型是否为多类型的其中之一
             const typo = Object.getPrototypeOf(value);
             if (!rules.type.includes(typo)) {
-                throw new Error(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', typo.name).replace('{value}', value));
+                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', typo.name).replace('{value}', value));
             }
         }
         else {
             // 判断数据类型是否精准匹配
             if (Object.prototype.toString.call(value) !== `[object ${(_a = rules.type) === null || _a === void 0 ? void 0 : _a.name}]`) {
-                throw new Error(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value));
+                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value));
             }
         }
         if (rules.validator) {
