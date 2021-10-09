@@ -1,61 +1,56 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ModelStorage = exports.Meta = exports.Attr = void 0;
-var Attr = /** @class */ (function () {
-    function Attr(name) {
+class Attr {
+    constructor(name) {
         this.name = '';
         this.rules = {};
         this.name = name;
     }
-    Attr.prototype.setRule = function (rule) {
+    setRule(rule) {
         Object.assign(this.rules, rule);
-    };
-    return Attr;
-}());
+    }
+}
 exports.Attr = Attr;
-var Meta = /** @class */ (function () {
+class Meta {
     // eslint-disable-next-line @typescript-eslint/ban-types
-    function Meta(target) {
+    constructor(target) {
         this.name = '';
         this.attrs = [];
         this.target = target;
         this.name = target.name;
     }
-    Meta.prototype.attr = function (name) {
-        var attr = this.attrs.find(function (v) { return v.name === name; });
+    attr(name) {
+        let attr = this.attrs.find(v => v.name === name);
         if (!attr) {
             attr = new Attr(name);
             this.attrs.push(attr);
         }
         return attr;
-    };
-    Meta.prototype.merge = function (attrs) {
-        var _this = this;
-        if (attrs === void 0) { attrs = []; }
-        attrs.forEach(function (attr) {
-            if (!_this.attrs.find(function (v) { return v.name === attr.name; })) {
-                _this.attrs.push(attr);
+    }
+    merge(attrs = []) {
+        attrs.forEach(attr => {
+            if (!this.attrs.find(v => v.name === attr.name)) {
+                this.attrs.push(attr);
             }
         });
-    };
-    return Meta;
-}());
+    }
+}
 exports.Meta = Meta;
-var ModelStorage = /** @class */ (function () {
-    function ModelStorage() {
+class ModelStorage {
+    constructor() {
         this.entities = [];
     }
     // eslint-disable-next-line @typescript-eslint/ban-types
-    ModelStorage.prototype.entity = function (target) {
-        var entity = this.entities.find(function (v) { return v.target === target; });
+    entity(target) {
+        let entity = this.entities.find(v => v.target === target);
         if (!entity) {
             entity = new Meta(target);
             this.entities.push(entity);
         }
         return entity;
-    };
-    return ModelStorage;
-}());
+    }
+}
 exports.ModelStorage = ModelStorage;
-var storage = new ModelStorage();
+const storage = new ModelStorage();
 exports.default = storage;

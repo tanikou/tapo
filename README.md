@@ -91,7 +91,7 @@ Staff { name: 'Tapo Mapper', author: 'tan', email: '', year: 2021 }
 ```
 
 
-# use as vue component props type
+# as props type of vue component
 ```
 <template>
   <div>
@@ -111,4 +111,88 @@ export default defineComponent({
   }
 })
 </script>
+```
+
+# mult type and enumeration
+```
+import { Entity, Model, type, enumeration } from 'tapo'
+
+@Entity()
+export default class Named extends Model {
+  constructor (source) {
+    super()
+    this.parse(source)
+  }
+
+  @type(String)
+  name = ''
+
+  @type([String, Number])
+  key = ''
+
+  @enumeration([10, 20])
+  age = 0
+}
+```
+
+good
+```
+new Named({ name: 'Tapo', key: 1,  age: 10})
+
+get
+
+Named { name: "Tapo", key: 1,  age: 10 }
+
+
+new Named({ name: 'Tapo', key: 'private key',  age: 10})
+
+get
+
+Named { name: "Tapo", key: "private key",  age: 10 }
+```
+
+error
+```
+new Named({ name: 'Tapo', key: 1,  age: 30})
+
+get
+
+Error: Named.age defined as [10, 20], 30
+```
+
+# reverse entity to json object for api request
+```
+import { Entity, Model, type, to, reverse } from 'tapo'
+
+@Entity()
+export default class Query extends Model {
+  constructor (source) {
+    super()
+    this.parse(source)
+  }
+
+  @from('nickname')
+  @type(String)
+  @to('userName')
+  name = ''
+
+  @type(String)
+  @to("privatekey")
+  @reverse((v) => 'base64://' + v)
+  key = ''
+}
+```
+```
+const entity = new Query({ nickname: 'tapo', key: '123' })
+
+get
+
+Query { name: "tapo", key: "123" }
+
+
+entity.reverse()
+
+get
+
+{ "userName": "tapo", "privatekey": "base64://123" }
 ```

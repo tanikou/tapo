@@ -3,137 +3,233 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setMessageFormat = exports.Entity = exports.Model = exports.validator = exports.format = exports.nullable = exports.type = exports.from = exports.field = void 0;
+exports.setMessageFormat = exports.Entity = exports.Model = exports.reverse = exports.to = exports.validator = exports.nullable = exports.format = exports.from = exports.type = exports.field = exports.ModelError = void 0;
 /* eslint-disable */
-var storage_1 = __importDefault(require("./storage"));
-var errMessageFormat = "{entity}.{attr} defined as {type}, got\uFF1A{value}";
-var field = function (config) {
+const storage_1 = __importDefault(require("./storage"));
+let errMessageFormat = `{entity}.{attr} defined as {type}, got：{value}`;
+class ModelError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = new.target.name;
+        if (typeof Error.captureStackTrace === 'function') {
+            Error.captureStackTrace(this, new.target);
+        }
+        if (typeof Object.setPrototypeOf === 'function') {
+            Object.setPrototypeOf(this, new.target.prototype);
+        }
+        else {
+            this.__proto__ = new.target.prototype;
+        }
+    }
+}
+exports.ModelError = ModelError;
+const field = (config) => {
     return function (target, name) {
         storage_1.default.entity(target.constructor).attr(name).setRule(config);
     };
 };
 exports.field = field;
 /**
- * 定义数据来源字段，可多层结构，如member.company.id
- * @param value 来源字段，如果为空则表示属性名一致
- * @returns
- */
-var from = function (value) {
-    return function (target, name) {
-        storage_1.default.entity(target.constructor).attr(name).setRule({ from: value });
-    };
-};
-exports.from = from;
-/**
  * 定义数据类型
  * @param value String Number Boolean ...其他基础数据类型或实体类
  * @returns
  */
-var type = function (value) {
+const type = (value) => {
     return function (target, name) {
         storage_1.default.entity(target.constructor).attr(name).setRule({ type: value });
     };
 };
 exports.type = type;
 /**
- * 标记此属性可以为null或者undefined
- * @param value = true, true = 可以为空，false则不可
+ * 定义数据来源字段，可多层结构，如member.company.id
+ * @param value 来源字段，如果为空则表示属性名一致
  * @returns
  */
-var nullable = function (value) {
-    if (value === void 0) { value = true; }
+const from = (value) => {
     return function (target, name) {
-        storage_1.default.entity(target.constructor).attr(name).setRule({ nullable: value });
+        storage_1.default.entity(target.constructor).attr(name).setRule({ from: value });
     };
 };
-exports.nullable = nullable;
+exports.from = from;
 /**
  * 定义数据格式化转换方法
  * @param value 格式化方法
  * @returns
  */
-var format = function (value) {
+const format = (value) => {
     return function (target, name) {
         storage_1.default.entity(target.constructor).attr(name).setRule({ format: value });
     };
 };
 exports.format = format;
 /**
+ * 标记此属性可以为null或者undefined
+ * @param value = true, true = 可以为空，false则不可
+ * @returns
+ */
+const nullable = (value = true) => {
+    return function (target, name) {
+        storage_1.default.entity(target.constructor).attr(name).setRule({ nullable: value });
+    };
+};
+exports.nullable = nullable;
+/**
  * 定义数据校验方法。返回false则表示验证不通过，自定义提示信息可通过throw new Error实现
  * @param value 校验方法数组
  * @returns
  */
-var validator = function (value) {
+const validator = (value) => {
     return function (target, name) {
         storage_1.default.entity(target.constructor).attr(name).setRule({ validator: value });
     };
 };
 exports.validator = validator;
-var pick = function (key, value) {
-    if (key.length === 1) {
-        return value[key[0]];
+/**
+ * 定义数据逆向字段名，如果不定义在做逆向转换时将被忽略
+ * @param value 逆向字段属性名
+ * @returns
+ */
+const to = (value) => {
+    return function (target, name) {
+        storage_1.default.entity(target.constructor).attr(name).setRule({ to: value });
+    };
+};
+exports.to = to;
+/**
+ * 自定义数据格式化转换方法
+ * @param value 格式化方法
+ * @returns
+ */
+const reverse = (value) => {
+    return function (target, name) {
+        storage_1.default.entity(target.constructor).attr(name).setRule({ reverse: value });
+    };
+};
+exports.reverse = reverse;
+/**
+ * 根据key路径从源数据中提取值
+ * @param key key路径，如id或company.id
+ * @param source 源数据
+ * @returns
+ */
+const pick = (key, source) => {
+    if (!source) {
+        return undefined;
     }
-    var top = key.shift() || '';
-    return pick(key, value[top]);
+    if (key.length === 1) {
+        return source[key[0]];
+    }
+    const top = key.shift() || '';
+    return pick(key, source[top]);
 };
 /**
  * Model基类，子类继承后可实现ORM转换
  */
-var Model = /** @class */ (function () {
-    function Model(source) {
+class Model {
+    constructor(source) {
         this.parse(source);
     }
     /**
      * 实体初始化完成后的回调方法。子类可覆盖后实现自己的处理逻辑
      */
-    Model.prototype.onReady = function () {
+    onReady() {
         // 当初始化完成后调用，以便做一些特别处理
-    };
+    }
     /**
      * 从来源对象中规则解析为实体对象
      * @param source 来源数据
      * @returns
      */
-    Model.prototype.parse = function (source) {
-        var _this = this;
+    doPrivateParse(attr, source) {
+        var _a;
+        const { name, rules } = attr;
+        const origin = pick((rules.from || name).split('.'), source);
+        const value = rules.format ? rules.format(origin, source) : origin;
+        if ((value === null || value === undefined) && rules.nullable === true) {
+            return;
+        }
+        this[name] = value;
+        if (rules.enumeration) {
+            // 判断枚举类型是否匹配
+            if (!rules.enumeration.includes(value)) {
+                throw new Error(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.enumeration.join(', ')).replace('{value}', value));
+            }
+        }
+        else if (Array.isArray(rules.type)) {
+            // 判断数据类型是否为多类型的其中之一
+            const typo = Object.getPrototypeOf(value);
+            if (!rules.type.includes(typo)) {
+                throw new Error(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', typo.name).replace('{value}', value));
+            }
+        }
+        else {
+            // 判断数据类型是否精准匹配
+            if (Object.prototype.toString.call(value) !== `[object ${(_a = rules.type) === null || _a === void 0 ? void 0 : _a.name}]`) {
+                throw new Error(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value));
+            }
+        }
+        if (rules.validator) {
+            (Array.isArray(rules.validator) ? rules.validator : [rules.validator]).forEach(func => {
+                func(value);
+            });
+        }
+    }
+    parse(source) {
         if (!source) {
             return this;
         }
-        storage_1.default.entity(this.constructor).attrs.forEach(function (attr) {
-            var _a, _b;
-            var name = attr.name, rules = attr.rules;
-            var origin = pick((rules.from || name).split('.'), source);
-            var value = rules.format ? rules.format(origin, source) : origin;
-            if ((value === null || value === undefined) && rules.nullable === true) {
-                return;
-            }
-            _this[name] = value;
-            if (Object.prototype.toString.call(value) !== "[object " + ((_a = rules.type) === null || _a === void 0 ? void 0 : _a.name) + "]") {
-                throw new Error(errMessageFormat.replace('{entity}', _this.constructor.name).replace('{attr}', name).replace('{type}', (_b = rules.type) === null || _b === void 0 ? void 0 : _b.name).replace('{value}', value));
+        storage_1.default.entity(this.constructor).attrs.forEach(attr => {
+            this.doPrivateParse(attr, source);
+        });
+        return this;
+    }
+    /**
+     * 将数据合并到entity中（只合并entity定义过的key）
+     * @param source 需要做合并的数据
+     * @returns
+     */
+    merge(source) {
+        if (!source) {
+            return this;
+        }
+        storage_1.default.entity(this.constructor).attrs.forEach(attr => {
+            if (Object.prototype.hasOwnProperty.call(source, attr.name)) {
+                this.doPrivateParse(attr, source);
             }
         });
-        this.onReady();
         return this;
-    };
-    return Model;
-}());
+    }
+    /**
+     * 将实体转换为后端接口需要的JSON对象
+     */
+    reverse() {
+        const json = {};
+        storage_1.default.entity(this.constructor).attrs.forEach(attr => {
+            const { name, rules } = attr;
+            if (rules.to) {
+                json[rules.to] = rules.reverse ? rules.reverse(this[name], this) : this[name];
+            }
+        });
+        return json;
+    }
+}
 exports.Model = Model;
 /**
  * 注解类为一个实体，实现继承的效果。如果不用此注解，那么将丢失父类的字段定义
  * @returns
  */
-var Entity = function () {
+const Entity = () => {
     // eslint-disable-next-line @typescript-eslint/ban-types
     return function (target) {
-        var parent = Object.getPrototypeOf(target.prototype);
+        const parent = Object.getPrototypeOf(target.prototype);
         if (parent.constructor.name !== 'Object' && target.name !== parent.constructor.name) {
-            var ex = storage_1.default.entity(parent.constructor).attrs;
+            const ex = storage_1.default.entity(parent.constructor).attrs;
             storage_1.default.entity(target).merge(ex);
         }
     };
 };
 exports.Entity = Entity;
-var setMessageFormat = function (v) {
+const setMessageFormat = (v) => {
     errMessageFormat = v;
 };
 exports.setMessageFormat = setMessageFormat;
