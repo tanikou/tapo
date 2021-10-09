@@ -64,7 +64,7 @@ const format = (value) => {
 exports.format = format;
 /**
  * 标记此属性可以为null或者undefined
- * @param value = true, true = 可以为空，false则不可
+ * @param value = true, true可以为空，false则不可
  * @returns
  */
 const nullable = (value = true) => {
@@ -141,7 +141,6 @@ class Model {
      * @returns
      */
     doPrivateParse(attr, source) {
-        var _a;
         const { name, rules } = attr;
         const origin = pick((rules.from || name).split('.'), source);
         const value = rules.format ? rules.format(origin, source) : origin;
@@ -157,14 +156,15 @@ class Model {
         }
         else if (Array.isArray(rules.type)) {
             // 判断数据类型是否为多类型的其中之一
-            const typo = Object.getPrototypeOf(value);
+            const typo = Object.getPrototypeOf(value).constructor;
             if (!rules.type.includes(typo)) {
-                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', typo.name).replace('{value}', value));
+                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.map(v => v.name).join(', ')).replace('{value}', value));
             }
         }
-        else {
+        else if (rules.type) {
             // 判断数据类型是否精准匹配
-            if (Object.prototype.toString.call(value) !== `[object ${(_a = rules.type) === null || _a === void 0 ? void 0 : _a.name}]`) {
+            const typo = Object.getPrototypeOf(value).constructor;
+            if (rules.type === typo) {
                 throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value));
             }
         }

@@ -40,7 +40,7 @@ export const field = (config: ModelConfig): any => {
  * @param value String Number Boolean ...其他基础数据类型或实体类
  * @returns
  */
-export const type = (value: Function): any => {
+export const type = (value: Function | Function[]): any => {
   return function (target: ClassDecorator, name: string) {
     storage.entity(target.constructor).attr(name).setRule({ type: value })
   }
@@ -70,7 +70,7 @@ export const format = (value: (v: any, ori: Record<string, unknown>) => any): an
 
 /**
  * 标记此属性可以为null或者undefined
- * @param value = true, true = 可以为空，false则不可
+ * @param value = true, true可以为空，false则不可
  * @returns
  */
 export const nullable = (value = true): any => {
@@ -174,14 +174,15 @@ export class Model {
       }
     } else if (Array.isArray(rules.type)) {
       // 判断数据类型是否为多类型的其中之一
-      const typo = Object.getPrototypeOf(value)
+      const typo = Object.getPrototypeOf(value).constructor
       if (!rules.type.includes(typo)) {
-        throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', typo.name).replace('{value}', value))
+        throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.map(v => v.name).join(', ')).replace('{value}', value))
       }
-    } else {
+    } else if (rules.type) {
       // 判断数据类型是否精准匹配
-      if (Object.prototype.toString.call(value) !== `[object ${rules.type?.name}]`) {
-        throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type!.name).replace('{value}', value))
+      const typo = Object.getPrototypeOf(value).constructor
+      if (rules.type === typo) {
+        throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value))
       }
     }
 
