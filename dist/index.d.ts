@@ -21,15 +21,19 @@ export function Entity(): any;
 
 export function field(config: ModelConfig): any;
 
-export function format(value: any): any;
+export function format(value: (v: any, me: Record<any, any>) => any): any;
 
-export function from(value: any): any;
-
-export function nullable(value = true): any;
-
-export function setMessageFormat(v: any): void;
+export function from(value?: string): any;
 
 export function type(value: any): any;
 
+export function nullable(value = true): any;
+
 export function validator(value: any): any;
+
+export function to(value?: string): any;
+
+export function reverse(value: (v: any, me: Record<any, any>) => any): any;
+
+export function setMessageFormat(v: string): void;
 

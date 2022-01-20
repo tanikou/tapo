@@ -20,11 +20,11 @@ export class ModelError extends Error {
 
 export interface ModelConfig {
   enumeration?: any[]
-  from?: string
+  from?: string | undefined
   type?: Function | Function[]
   nullable?: boolean
   format?: (v: any, source: Record<string, unknown>) => any
-  to?: string
+  to?: string | undefined
   reverse?: (v: any, source: Record<string, unknown>) => any
   validator?: (value: any, source: Record<string, unknown>) => any | Array<(value: any, source: Record<string, unknown>) => any>
 }
@@ -51,7 +51,7 @@ export const type = (value: Function | Function[]): any => {
  * @param value 来源字段，如果为空则表示属性名一致
  * @returns
  */
-export const from = (value: string): any => {
+export const from = (value?: string): any => {
   return function (target: ClassDecorator, name: string) {
     storage.entity(target.constructor).attr(name).setRule({ from: value })
   }
@@ -92,10 +92,10 @@ export const validator = (value: (value: any, source: Record<string, unknown>) =
 
 /**
  * 定义数据逆向字段名，如果不定义在做逆向转换时将被忽略
- * @param value 逆向字段属性名
+ * @param value 逆向字段属性名，如果为空则表示属性名一致
  * @returns
  */
-export const to = (value: string): any => {
+export const to = (value?: string): any => {
   return function (target: ClassDecorator, name: string) {
     storage.entity(target.constructor).attr(name).setRule({ to: value })
   }
@@ -116,7 +116,7 @@ export const reverse = (value: (v: any, ori: Record<string, unknown>) => any): a
  * 根据key路径从源数据中提取值
  * @param key key路径，如id或company.id
  * @param source 源数据
- * @returns 
+ * @returns
  */
 const pick = (key: string[], source: Record<string, any>): any => {
   if (!source) {
@@ -131,7 +131,6 @@ const pick = (key: string[], source: Record<string, any>): any => {
 
   return pick(key, source[top])
 }
-
 
 /**
  * Model基类，子类继承后可实现ORM转换
@@ -173,6 +172,10 @@ export class Model {
         throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.enumeration.join(', ')).replace('{value}', value))
       }
     } else if (Array.isArray(rules.type)) {
+      // 判断数据类型是否精准匹配
+      if (value === undefined || value === null) {
+        throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.map(v => v.name).join(', ')).replace('{value}', value))
+      }
       // 判断数据类型是否为多类型的其中之一
       const typo = Object.getPrototypeOf(value).constructor
       if (!rules.type.includes(typo)) {
@@ -180,7 +183,10 @@ export class Model {
       }
     } else if (rules.type) {
       // 判断数据类型是否精准匹配
-      const typo = Object.getPrototypeOf(value).constructor
+      if (value === undefined || value === null) {
+        throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value))
+      }
+      const typo = Object.getPrototypeOf(value)
       if (rules.type === typo) {
         throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value))
       }
@@ -193,14 +199,33 @@ export class Model {
     }
   }
 
+  /**
+   * 从来源对象中复制属性到实休
+   * @param source 来源数据
+   * @returns
+   */
+  doPrivateCopy (source: Record<string, any>): any {
+    storage.entity(this.constructor).attrs.forEach(attr => {
+      const { name, rules } = attr
+      this[name] = source[name]
+    })
+    return this
+  }
+
   parse (source?: Record<string, any>): any {
     if (!source) {
       return this
     }
 
-    storage.entity(this.constructor).attrs.forEach(attr => {
-      this.doPrivateParse(attr, source)
-    })
+    const isen = Object.getPrototypeOf(source).constructor === Object.getPrototypeOf(this).constructor
+
+    if (isen) {
+      this.doPrivateCopy(source)
+    } else {
+      storage.entity(this.constructor).attrs.forEach(attr => {
+        this.doPrivateParse(attr, source)
+      })
+    }
 
     return this
   }
@@ -208,18 +233,24 @@ export class Model {
   /**
    * 将数据合并到entity中（只合并entity定义过的key）
    * @param source 需要做合并的数据
-   * @returns 
+   * @returns
    */
   merge (source: Record<string, unknown>) {
     if (!source) {
       return this
     }
 
-    storage.entity(this.constructor).attrs.forEach(attr => {
-      if (Object.prototype.hasOwnProperty.call(source, attr.name)) {
-        this.doPrivateParse(attr, source)
-      }
-    })
+    const isen = Object.getPrototypeOf(source).constructor === Object.getPrototypeOf(this).constructor
+
+    if (isen) {
+      this.doPrivateCopy(source)
+    } else {
+      storage.entity(this.constructor).attrs.forEach(attr => {
+        if (Object.prototype.hasOwnProperty.call(source, attr.name)) {
+          this.doPrivateParse(attr, source)
+        }
+      })
+    }
 
     return this
   }
@@ -227,13 +258,16 @@ export class Model {
   /**
    * 将实体转换为后端接口需要的JSON对象
    */
-  reverse () {
+  reverse (option = { lightly: true }) {
     const json = {} as Record<string, any>
 
     storage.entity(this.constructor).attrs.forEach(attr => {
       const { name, rules } = attr
-      if (rules.to) {
-        json[rules.to] = rules.reverse ? rules.reverse(this[name], this) : this[name]
+      if (rules.hasOwnProperty('to')) {
+        const val = rules.reverse ? rules.reverse(this[name], this) : this[name]
+        if (option.lightly === false || (val !== '' && val !== null)) {
+          json[rules.to || name] = val
+        }
       }
     })
 
@@ -249,7 +283,7 @@ export const Entity = () => {
   // eslint-disable-next-line @typescript-eslint/ban-types
   return function (target: Function) {
     const parent = Object.getPrototypeOf(target.prototype)
-    if (parent.constructor.name !== 'Object' && target.name !== parent.constructor.name) {
+    if (parent.constructor.name !== 'Object' && target !== parent.constructor) {
       const ex = storage.entity(parent.constructor).attrs
       storage.entity(target).merge(ex)
     }

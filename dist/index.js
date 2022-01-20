@@ -86,7 +86,7 @@ const validator = (value) => {
 exports.validator = validator;
 /**
  * 定义数据逆向字段名，如果不定义在做逆向转换时将被忽略
- * @param value 逆向字段属性名
+ * @param value 逆向字段属性名，如果为空则表示属性名一致
  * @returns
  */
 const to = (value) => {
@@ -155,6 +155,10 @@ class Model {
             }
         }
         else if (Array.isArray(rules.type)) {
+            // 判断数据类型是否精准匹配
+            if (value === undefined || value === null) {
+                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.map(v => v.name).join(', ')).replace('{value}', value));
+            }
             // 判断数据类型是否为多类型的其中之一
             const typo = Object.getPrototypeOf(value).constructor;
             if (!rules.type.includes(typo)) {
@@ -163,7 +167,10 @@ class Model {
         }
         else if (rules.type) {
             // 判断数据类型是否精准匹配
-            const typo = Object.getPrototypeOf(value).constructor;
+            if (value === undefined || value === null) {
+                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value));
+            }
+            const typo = Object.getPrototypeOf(value);
             if (rules.type === typo) {
                 throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value));
             }
@@ -174,13 +181,31 @@ class Model {
             });
         }
     }
+    /**
+     * 从来源对象中复制属性到实休
+     * @param source 来源数据
+     * @returns
+     */
+    doPrivateCopy(source) {
+        storage_1.default.entity(this.constructor).attrs.forEach(attr => {
+            const { name, rules } = attr;
+            this[name] = source[name];
+        });
+        return this;
+    }
     parse(source) {
         if (!source) {
             return this;
         }
-        storage_1.default.entity(this.constructor).attrs.forEach(attr => {
-            this.doPrivateParse(attr, source);
-        });
+        const isen = Object.getPrototypeOf(source).constructor === Object.getPrototypeOf(this).constructor;
+        if (isen) {
+            this.doPrivateCopy(source);
+        }
+        else {
+            storage_1.default.entity(this.constructor).attrs.forEach(attr => {
+                this.doPrivateParse(attr, source);
+            });
+        }
         return this;
     }
     /**
@@ -192,22 +217,31 @@ class Model {
         if (!source) {
             return this;
         }
-        storage_1.default.entity(this.constructor).attrs.forEach(attr => {
-            if (Object.prototype.hasOwnProperty.call(source, attr.name)) {
-                this.doPrivateParse(attr, source);
-            }
-        });
+        const isen = Object.getPrototypeOf(source).constructor === Object.getPrototypeOf(this).constructor;
+        if (isen) {
+            this.doPrivateCopy(source);
+        }
+        else {
+            storage_1.default.entity(this.constructor).attrs.forEach(attr => {
+                if (Object.prototype.hasOwnProperty.call(source, attr.name)) {
+                    this.doPrivateParse(attr, source);
+                }
+            });
+        }
         return this;
     }
     /**
      * 将实体转换为后端接口需要的JSON对象
      */
-    reverse() {
+    reverse(option = { lightly: true }) {
         const json = {};
         storage_1.default.entity(this.constructor).attrs.forEach(attr => {
             const { name, rules } = attr;
-            if (rules.to) {
-                json[rules.to] = rules.reverse ? rules.reverse(this[name], this) : this[name];
+            if (rules.hasOwnProperty('to')) {
+                const val = rules.reverse ? rules.reverse(this[name], this) : this[name];
+                if (option.lightly === false || (val !== '' && val !== null)) {
+                    json[rules.to || name] = val;
+                }
             }
         });
         return json;
@@ -222,7 +256,7 @@ const Entity = () => {
     // eslint-disable-next-line @typescript-eslint/ban-types
     return function (target) {
         const parent = Object.getPrototypeOf(target.prototype);
-        if (parent.constructor.name !== 'Object' && target.name !== parent.constructor.name) {
+        if (parent.constructor.name !== 'Object' && target !== parent.constructor) {
             const ex = storage_1.default.entity(parent.constructor).attrs;
             storage_1.default.entity(target).merge(ex);
         }
