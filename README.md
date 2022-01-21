@@ -223,10 +223,12 @@ entity.reverse() will ingore `null`, `''`, `undefined` property by default, you 
 # anotations
 
 1. @`Enitity` => 注解在类上
-2. @`from` => 定义字段数据来源，可多级结构
-3. @`type` => 定义字段数据类型，可是基础数据类型也可以类，可设置多类型
-4. @`nullable` => 设置是否允许为空
-5. @`format` => 用于自定义格式化转换数据，(value, source) => any
-6. @`validator` => 自定义校验
-7. @`to` => 定义讲类转成换其他对象，一般用于转给后端接口
-8. @`reverse` => 自定义在 to 时如何转换属性
+2. @`from` => 定义字段数据来源，可多级结构。例`@from('company.name')`
+3. @`type` => 定义字段数据类型，可是基础数据类型也可以类，可设置多类型,例: `@type([Number, String])`
+4. @`nullable` => 设置是否允许为空，即允许值为`null`或`undefined`
+5. @`format` => 用于自定义格式化转换数据。例：`@format(v => (v * 60) + '分钟')`
+6. @`enumeration` => 设置数据只能是枚举的值
+7. @`validator` => 自定义校验
+8. @`to` => 定义将属性名转成换其他属性名，一般用于转给后端接口。例:类属性`name`转换成`userName`，`@to('userName')`
+9. @`reverse` => 自定义在 to 时如何转换属性。
+   例: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))`
