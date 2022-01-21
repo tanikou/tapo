@@ -35,5 +35,7 @@ export function to(value?: string): any;
 
 export function reverse(value: (v: any, me: Record<any, any>) => any): any;
 
+export function merge(value: (v: any, me: Record<any, any>) => any): any;
+
 export function setMessageFormat(v: string): void;
 
