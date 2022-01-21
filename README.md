@@ -1,13 +1,15 @@
 a tiny and simple entity mapper for frontend. inspired by typeorm
 
-`Entity可继承，简单配置，可直接用作vue组件prop的类型限制`
+`Entity可继承，简单配置，可直接用作vue组件prop的类型限制。支持TS`
 
 # install
+
 ```
 npm i --save tapo
 ```
 
 # define entity
+
 ```
 import { Entity, Model, type } from 'tapo'
 
@@ -24,35 +26,45 @@ export default class Named extends Model {
 ```
 
 example 1:
+
 ```
 new Named({ name: 'Tapo', date: new Date() })
 ```
+
 get result
+
 ```
 Named {name: "Tapo"}
 ```
 
 example 2: `attr not match`
+
 ```
 new Named({ date: new Date() })
 ```
+
 get result
+
 ```
 Error: Named.name defined as String, got：undefined
 ```
 
 # customize error message
+
 ```
 import { setMessageFormat } from 'tapo'
 
 setMessageFormat('{entity}.{attr}: {value} is not "{type}"')
 ```
+
 get result
+
 ```
 Error: Named.name: undefined is not "String"
 ```
 
 # `extend` others and more `anotations`
+
 ```
 import { Entity, Model, type, from, nullable, format, validator } from 'tapo'
 
@@ -86,12 +98,13 @@ new Staff({
   birthday: new Date()
 })
 ```
+
 ```
 Staff { name: 'Tapo Mapper', author: 'tan', email: '', year: 2021 }
 ```
 
-
 # as props type of vue component
+
 ```
 <template>
   <div>
@@ -114,6 +127,7 @@ export default defineComponent({
 ```
 
 # mult type and enumeration
+
 ```
 import { Entity, Model, type, enumeration } from 'tapo'
 
@@ -136,6 +150,7 @@ export default class Named extends Model {
 ```
 
 good
+
 ```
 new Named({ name: 'Tapo', key: 1,  age: 10})
 
@@ -152,6 +167,7 @@ Named { name: "Tapo", key: "private key",  age: 10 }
 ```
 
 error
+
 ```
 new Named({ name: 'Tapo', key: 1,  age: 30})
 
@@ -161,6 +177,7 @@ Error: Named.age defined as [10, 20], 30
 ```
 
 # reverse entity to json object for api request
+
 ```
 import { Entity, Model, type, to, reverse } from 'tapo'
 
@@ -180,14 +197,18 @@ export default class Query extends Model {
   @to("privatekey")
   @reverse((v) => 'base64://' + v)
   key = ''
+
+  @to()
+  addr = ''
 }
 ```
+
 ```
 const entity = new Query({ nickname: 'tapo', key: '123' })
 
 get
 
-Query { name: "tapo", key: "123" }
+Query { name: "tapo", key: "123", addr: '' }
 
 
 entity.reverse()
@@ -196,3 +217,16 @@ get
 
 { "userName": "tapo", "privatekey": "base64://123" }
 ```
+
+entity.reverse() will ingore `null`, `''`, `undefined` property by default, you can use `entity.reverse({ lightly: false })` to get `{ "userName": "tapo", "privatekey": "base64://123", "addr": "" }`
+
+# anotations
+
+1. @`Enitity` => 注解在类上
+2. @`from` => 定义字段数据来源，可多级结构
+3. @`type` => 定义字段数据类型，可是基础数据类型也可以类，可设置多类型
+4. @`nullable` => 设置是否允许为空
+5. @`format` => 用于自定义格式化转换数据，(value, source) => any
+6. @`validator` => 自定义校验
+7. @`to` => 定义讲类转成换其他对象，一般用于转给后端接口
+8. @`reverse` => 自定义在 to 时如何转换属性
