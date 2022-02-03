@@ -3,10 +3,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setMessageFormat = exports.Entity = exports.Model = exports.reverse = exports.to = exports.validator = exports.nullable = exports.format = exports.from = exports.type = exports.field = exports.ModelError = void 0;
+exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.reverse = exports.to = exports.validator = exports.nullable = exports.format = exports.from = exports.type = exports.field = exports.ModelError = void 0;
 /* eslint-disable */
 const storage_1 = __importDefault(require("./storage"));
-let errMessageFormat = `{entity}.{attr} defined as {type}, got：{value}`;
+let message = `{entity}.{attr} defined as {type}, got: {value}`;
+let errorLogger = {
+    error(v) {
+        throw new ModelError(v);
+    },
+};
+let notify = ({ entity = '', attr = '', type = '', value = '' }) => {
+    errorLogger.error(message
+        .replace('{entity}', entity)
+        .replace('{attr}', attr)
+        .replace('{type}', type)
+        .replace('{value}', value));
+};
 class ModelError extends Error {
     constructor(message) {
         super(message);
@@ -151,32 +163,32 @@ class Model {
         if (rules.enumeration) {
             // 判断枚举类型是否匹配
             if (!rules.enumeration.includes(value)) {
-                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.enumeration.join(', ')).replace('{value}', value));
+                notify({ entity: this.constructor.name, attr: name, type: rules.enumeration.join(', '), value });
             }
         }
         else if (Array.isArray(rules.type)) {
             // 判断数据类型是否精准匹配
             if (value === undefined || value === null) {
-                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.map(v => v.name).join(', ')).replace('{value}', value));
+                notify({ entity: this.constructor.name, attr: name, type: rules.type.map((v) => v.name).join(', '), value });
             }
             // 判断数据类型是否为多类型的其中之一
             const typo = Object.getPrototypeOf(value).constructor;
             if (!rules.type.includes(typo)) {
-                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.map(v => v.name).join(', ')).replace('{value}', value));
+                notify({ entity: this.constructor.name, attr: name, type: rules.type.map((v) => v.name).join(', '), value });
             }
         }
         else if (rules.type) {
             // 判断数据类型是否精准匹配
             if (value === undefined || value === null) {
-                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value));
+                notify({ entity: this.constructor.name, attr: name, type: rules.type.name, value });
             }
-            const typo = Object.getPrototypeOf(value);
-            if (rules.type === typo) {
-                throw new ModelError(errMessageFormat.replace('{entity}', this.constructor.name).replace('{attr}', name).replace('{type}', rules.type.name).replace('{value}', value));
+            const typo = Object.getPrototypeOf(value).constructor;
+            if (rules.type !== typo) {
+                notify({ entity: this.constructor.name, attr: name, type: rules.type.name, value });
             }
         }
         if (rules.validator) {
-            (Array.isArray(rules.validator) ? rules.validator : [rules.validator]).forEach(func => {
+            (Array.isArray(rules.validator) ? rules.validator : [rules.validator]).forEach((func) => {
                 func(value);
             });
         }
@@ -187,7 +199,7 @@ class Model {
      * @returns
      */
     doPrivateCopy(source) {
-        storage_1.default.entity(this.constructor).attrs.forEach(attr => {
+        storage_1.default.entity(this.constructor).attrs.forEach((attr) => {
             const { name, rules } = attr;
             this[name] = source[name];
         });
@@ -197,12 +209,13 @@ class Model {
         if (!source) {
             return this;
         }
-        const isen = Object.getPrototypeOf(source).constructor === Object.getPrototypeOf(this).constructor;
+        const isen = Object.getPrototypeOf(source).constructor ===
+            Object.getPrototypeOf(this).constructor;
         if (isen) {
             this.doPrivateCopy(source);
         }
         else {
-            storage_1.default.entity(this.constructor).attrs.forEach(attr => {
+            storage_1.default.entity(this.constructor).attrs.forEach((attr) => {
                 this.doPrivateParse(attr, source);
             });
         }
@@ -222,10 +235,42 @@ class Model {
             this.doPrivateCopy(source);
         }
         else {
-            storage_1.default.entity(this.constructor).attrs.forEach(attr => {
+            storage_1.default.entity(this.constructor).attrs.forEach((attr) => {
                 if (Object.prototype.hasOwnProperty.call(source, attr.name)) {
                     this.doPrivateParse(attr, source);
                 }
+            });
+        }
+        return this;
+    }
+    /**
+     * 将数据合并到entity中（只合并entity定义过的key，数据类型如果不匹配将尝试自动转换，一般用于query还原）
+     * @param source 需要做合并的数据
+     * @returns
+     */
+    mergein(source) {
+        if (!source) {
+            return this;
+        }
+        const isen = Object.getPrototypeOf(source).constructor === Object.getPrototypeOf(this).constructor;
+        if (isen) {
+            this.doPrivateCopy(source);
+        }
+        else {
+            const attrs = storage_1.default.entity(this.constructor).attrs;
+            Object.keys(this).forEach((prop) => {
+                var _a;
+                if (!source.hasOwnProperty(prop)) {
+                    return;
+                }
+                const rules = (_a = attrs.find((attr) => attr.name === prop)) === null || _a === void 0 ? void 0 : _a.rules;
+                if (!(rules === null || rules === void 0 ? void 0 : rules.type)) {
+                    const tp = Object.getPrototypeOf(this[prop]).constructor;
+                    this[prop] = tp(source[prop]);
+                    return;
+                }
+                const tp = Array.isArray(rules === null || rules === void 0 ? void 0 : rules.type) ? rules.type[0] : rules.type;
+                this[prop] = tp(source[prop]);
             });
         }
         return this;
@@ -235,11 +280,11 @@ class Model {
      */
     reverse(option = { lightly: true }) {
         const json = {};
-        storage_1.default.entity(this.constructor).attrs.forEach(attr => {
+        storage_1.default.entity(this.constructor).attrs.forEach((attr) => {
             const { name, rules } = attr;
             if (rules.hasOwnProperty('to')) {
                 const val = rules.reverse ? rules.reverse(this[name], this) : this[name];
-                if (option.lightly === false || (val !== '' && val !== null)) {
+                if (option.lightly === false || (val !== '' && val !== null) || val !== undefined) {
                     json[rules.to || name] = val;
                 }
             }
@@ -264,6 +309,10 @@ const Entity = () => {
 };
 exports.Entity = Entity;
 const setMessageFormat = (v) => {
-    errMessageFormat = v;
+    message = v;
 };
 exports.setMessageFormat = setMessageFormat;
+const setLogger = (logger) => {
+    errorLogger = logger;
+};
+exports.setLogger = setLogger;
