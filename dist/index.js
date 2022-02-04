@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.reverse = exports.to = exports.validator = exports.nullable = exports.format = exports.from = exports.type = exports.field = exports.ModelError = void 0;
+exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.reverse = exports.to = exports.validator = exports.nullable = exports.format = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = void 0;
 /* eslint-disable */
 const storage_1 = __importDefault(require("./storage"));
 let message = `{entity}.{attr} defined as {type}, got: {value}`;
@@ -63,6 +63,15 @@ const from = (value) => {
     };
 };
 exports.from = from;
+const enumeration = (value) => {
+    return function (target, name) {
+        storage_1.default
+            .entity(target.constructor)
+            .attr(name)
+            .setRule({ enumeration: value });
+    };
+};
+exports.enumeration = enumeration;
 /**
  * 定义数据格式化转换方法
  * @param value 格式化方法

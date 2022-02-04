@@ -73,6 +73,15 @@ export const from = (value?: string): any => {
   }
 }
 
+export const enumeration = (value: any[]): any => {
+  return function (target: ClassDecorator, name: string) {
+    storage
+      .entity(target.constructor)
+      .attr(name)
+      .setRule({ enumeration: value })
+  }
+}
+
 /**
  * 定义数据格式化转换方法
  * @param value 格式化方法
