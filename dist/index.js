@@ -151,12 +151,6 @@ class Model {
         this.parse(source);
     }
     /**
-     * 实体初始化完成后的回调方法。子类可覆盖后实现自己的处理逻辑
-     */
-    onReady() {
-        // 当初始化完成后调用，以便做一些特别处理
-    }
-    /**
      * 从来源对象中规则解析为实体对象
      * @param source 来源数据
      * @returns
@@ -172,32 +166,60 @@ class Model {
         if (rules.enumeration) {
             // 判断枚举类型是否匹配
             if (!rules.enumeration.includes(value)) {
-                notify({ entity: this.constructor.name, attr: name, type: rules.enumeration.join(', '), value });
+                notify({
+                    entity: this.constructor.name,
+                    attr: name,
+                    type: rules.enumeration.join(', '),
+                    value,
+                });
             }
         }
         else if (Array.isArray(rules.type)) {
             // 判断数据类型是否精准匹配
             if (value === undefined || value === null) {
-                notify({ entity: this.constructor.name, attr: name, type: rules.type.map((v) => v.name).join(', '), value });
+                notify({
+                    entity: this.constructor.name,
+                    attr: name,
+                    type: rules.type.map((v) => v.name).join(', '),
+                    value,
+                });
             }
             // 判断数据类型是否为多类型的其中之一
             const typo = Object.getPrototypeOf(value).constructor;
             if (!rules.type.includes(typo)) {
-                notify({ entity: this.constructor.name, attr: name, type: rules.type.map((v) => v.name).join(', '), value });
+                notify({
+                    entity: this.constructor.name,
+                    attr: name,
+                    type: rules.type.map((v) => v.name).join(', '),
+                    value,
+                });
             }
         }
         else if (rules.type) {
             // 判断数据类型是否精准匹配
             if (value === undefined || value === null) {
-                notify({ entity: this.constructor.name, attr: name, type: rules.type.name, value });
+                notify({
+                    entity: this.constructor.name,
+                    attr: name,
+                    type: rules.type.name,
+                    value,
+                });
             }
             const typo = Object.getPrototypeOf(value).constructor;
             if (rules.type !== typo) {
-                notify({ entity: this.constructor.name, attr: name, type: rules.type.name, value });
+                notify({
+                    entity: this.constructor.name,
+                    attr: name,
+                    type: rules.type.name,
+                    value,
+                });
             }
         }
         if (rules.validator) {
-            (Array.isArray(rules.validator) ? rules.validator : [rules.validator]).forEach((func) => {
+            ;
+            (Array.isArray(rules.validator)
+                ? rules.validator
+                : [rules.validator]).forEach((func) => {
                 func(value);
             });
         }
@@ -210,10 +232,17 @@ class Model {
     doPrivateCopy(source) {
         storage_1.default.entity(this.constructor).attrs.forEach((attr) => {
             const { name, rules } = attr;
-            this[name] = source[name];
+            if (source.hasOwnProperty(name)) {
+                this[name] = source[name];
+            }
         });
         return this;
     }
+    /**
+     * 将数据源根据定义转换将值赋值给实体。数据源是同类型实体对象将根据属性直接赋值
+     * @param source 数据源
+     * @returns
+     */
     parse(source) {
         if (!source) {
             return this;
@@ -239,29 +268,20 @@ class Model {
         if (!source) {
             return this;
         }
-        const isen = Object.getPrototypeOf(source).constructor === Object.getPrototypeOf(this).constructor;
-        if (isen) {
-            this.doPrivateCopy(source);
-        }
-        else {
-            storage_1.default.entity(this.constructor).attrs.forEach((attr) => {
-                if (Object.prototype.hasOwnProperty.call(source, attr.name)) {
-                    this.doPrivateParse(attr, source);
-                }
-            });
-        }
+        this.doPrivateCopy(source);
         return this;
     }
     /**
-     * 将数据合并到entity中（只合并entity定义过的key，数据类型如果不匹配将尝试自动转换，一般用于query还原）
+     * 将数据恢复到entity中（只合并entity定义过的key，数据类型如果不匹配将尝试自动转换，一般用于query还原）
      * @param source 需要做合并的数据
      * @returns
      */
-    mergein(source) {
+    recover(source) {
         if (!source) {
             return this;
         }
-        const isen = Object.getPrototypeOf(source).constructor === Object.getPrototypeOf(this).constructor;
+        const isen = Object.getPrototypeOf(source).constructor ===
+            Object.getPrototypeOf(this).constructor;
         if (isen) {
             this.doPrivateCopy(source);
         }
@@ -293,7 +313,9 @@ class Model {
             const { name, rules } = attr;
             if (rules.hasOwnProperty('to')) {
                 const val = rules.reverse ? rules.reverse(this[name], this) : this[name];
-                if (option.lightly === false || (val !== '' && val !== null) || val !== undefined) {
+                if (option.lightly === false ||
+                    (val !== '' && val !== null) ||
+                    val !== undefined) {
                     json[rules.to || name] = val;
                 }
             }

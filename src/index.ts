@@ -168,18 +168,11 @@ export class Model {
   }
 
   /**
-   * 实体初始化完成后的回调方法。子类可覆盖后实现自己的处理逻辑
-   */
-  onReady(): void {
-    // 当初始化完成后调用，以便做一些特别处理
-  }
-
-  /**
    * 从来源对象中规则解析为实体对象
    * @param source 来源数据
    * @returns
    */
-  doPrivateParse(attr: Attr, source: any): any {
+  doPrivateParse(attr: Attr, source: any): void {
     const { name, rules } = attr
 
     const origin = pick((rules.from || name).split('.'), source)
@@ -194,31 +187,59 @@ export class Model {
     if (rules.enumeration) {
       // 判断枚举类型是否匹配
       if (!rules.enumeration.includes(value)) {
-        notify({ entity: this.constructor.name, attr: name, type: rules.enumeration.join(', '), value })
+        notify({
+          entity: this.constructor.name,
+          attr: name,
+          type: rules.enumeration.join(', '),
+          value,
+        })
       }
     } else if (Array.isArray(rules.type)) {
       // 判断数据类型是否精准匹配
       if (value === undefined || value === null) {
-        notify({ entity: this.constructor.name, attr: name, type: rules.type.map((v) => v.name).join(', '), value })
+        notify({
+          entity: this.constructor.name,
+          attr: name,
+          type: rules.type.map((v) => v.name).join(', '),
+          value,
+        })
       }
       // 判断数据类型是否为多类型的其中之一
       const typo = Object.getPrototypeOf(value).constructor
       if (!rules.type.includes(typo)) {
-        notify({ entity: this.constructor.name, attr: name, type: rules.type.map((v) => v.name).join(', '), value })
+        notify({
+          entity: this.constructor.name,
+          attr: name,
+          type: rules.type.map((v) => v.name).join(', '),
+          value,
+        })
       }
     } else if (rules.type) {
       // 判断数据类型是否精准匹配
       if (value === undefined || value === null) {
-        notify({ entity: this.constructor.name, attr: name, type: rules.type.name, value })
+        notify({
+          entity: this.constructor.name,
+          attr: name,
+          type: rules.type.name,
+          value,
+        })
       }
       const typo = Object.getPrototypeOf(value).constructor
       if (rules.type !== typo) {
-        notify({ entity: this.constructor.name, attr: name, type: rules.type.name, value })
+        notify({
+          entity: this.constructor.name,
+          attr: name,
+          type: rules.type.name,
+          value,
+        })
       }
     }
 
     if (rules.validator) {
-      (Array.isArray(rules.validator) ? rules.validator : [rules.validator]).forEach((func) => {
+      ;(Array.isArray(rules.validator)
+        ? rules.validator
+        : [rules.validator]
+      ).forEach((func) => {
         func(value)
       })
     }
@@ -229,15 +250,22 @@ export class Model {
    * @param source 来源数据
    * @returns
    */
-  doPrivateCopy(source: Record<string, any>): any {
+  doPrivateCopy(source: Record<string, any>): this {
     storage.entity(this.constructor).attrs.forEach((attr) => {
       const { name, rules } = attr
-      this[name] = source[name]
+      if (source.hasOwnProperty(name)) {
+        this[name] = source[name]
+      }
     })
     return this
   }
 
-  parse(source?: Record<string, any>): any {
+  /**
+   * 将数据源根据定义转换将值赋值给实体。数据源是同类型实体对象将根据属性直接赋值
+   * @param source 数据源
+   * @returns
+   */
+  parse(source?: Record<string, any>): this {
     if (!source) {
       return this
     }
@@ -262,37 +290,29 @@ export class Model {
    * @param source 需要做合并的数据
    * @returns
    */
-  merge(source: Record<string, unknown>) {
+  merge(source?: Record<string, unknown>): this {
     if (!source) {
       return this
     }
 
-    const isen = Object.getPrototypeOf(source).constructor === Object.getPrototypeOf(this).constructor
-
-    if (isen) {
-      this.doPrivateCopy(source)
-    } else {
-      storage.entity(this.constructor).attrs.forEach((attr) => {
-        if (Object.prototype.hasOwnProperty.call(source, attr.name)) {
-          this.doPrivateParse(attr, source)
-        }
-      })
-    }
+    this.doPrivateCopy(source)
 
     return this
   }
 
   /**
-   * 将数据合并到entity中（只合并entity定义过的key，数据类型如果不匹配将尝试自动转换，一般用于query还原）
+   * 将数据恢复到entity中（只合并entity定义过的key，数据类型如果不匹配将尝试自动转换，一般用于query还原）
    * @param source 需要做合并的数据
    * @returns
    */
-  mergein(source: Record<string, unknown>) {
+  recover(source: Record<string, unknown>): this {
     if (!source) {
       return this
     }
 
-    const isen = Object.getPrototypeOf(source).constructor === Object.getPrototypeOf(this).constructor
+    const isen =
+      Object.getPrototypeOf(source).constructor ===
+      Object.getPrototypeOf(this).constructor
 
     if (isen) {
       this.doPrivateCopy(source)
@@ -320,14 +340,18 @@ export class Model {
   /**
    * 将实体转换为后端接口需要的JSON对象
    */
-  reverse(option = { lightly: true }) {
+  reverse(option = { lightly: true }): Record<string, unknown> {
     const json = {} as Record<string, any>
 
     storage.entity(this.constructor).attrs.forEach((attr) => {
       const { name, rules } = attr
       if (rules.hasOwnProperty('to')) {
         const val = rules.reverse ? rules.reverse(this[name], this) : this[name]
-        if (option.lightly === false || (val !== '' && val !== null) || val !== undefined) {
+        if (
+          option.lightly === false ||
+          (val !== '' && val !== null) ||
+          val !== undefined
+        ) {
           json[rules.to || name] = val
         }
       }
@@ -352,10 +376,10 @@ export const Entity = () => {
   }
 }
 
-export const setMessageFormat = (v: string) => {
+export const setMessageFormat = (v: string): void => {
   message = v
 }
 
-export const setLogger = (logger: { error: (v: string) => void }) => {
+export const setLogger = (logger: { error: (v: string) => void }): void => {
   errorLogger = logger
 }

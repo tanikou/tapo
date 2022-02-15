@@ -4,13 +4,11 @@ export class Model implements Record<string, unknown> {
   constructor(source?: any)
   [x: string]: unknown
 
-  onReady(): void
+  parse(source?: any): this
 
-  parse(source?: any): any
+  merge(source?: any): this
 
-  merge(source: any): any
-
-  mergein(source: any): any
+  recover(source: any): this
 
   reverse(source?: any): any
 }

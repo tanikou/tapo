@@ -19,7 +19,7 @@ import { Entity, Model, type } from 'tapo'
 export default class Named extends Model {
   constructor (source) {
     super()
-    this.parse(source)
+    this.merge(source)
   }
 
   @type(String)
@@ -30,7 +30,7 @@ export default class Named extends Model {
 example 1:
 
 ```
-new Named({ name: 'Tapo', date: new Date() })
+new Named().parse({ name: 'Tapo', date: new Date() })
 ```
 
 get result
@@ -42,7 +42,7 @@ Named {name: "Tapo"}
 example 2: `attr not match`
 
 ```
-new Named({ date: new Date() })
+new Named().parse({ date: new Date() })
 ```
 
 get result
@@ -92,7 +92,7 @@ import { Entity, Model, type, from, nullable, format, validator } from 'tapo'
 export default class Staff extends Named {
   constructor (source) {
     super()
-    this.parse(source)
+    this.merge(source)
   }
 
   @from('author.name')
@@ -112,7 +112,7 @@ export default class Staff extends Named {
   year = ''
 }
 
-new Staff({
+new Staff().parse({
   name: 'Tapo Mapper',
   author: { name: 'tan' },
   birthday: new Date()
@@ -155,7 +155,7 @@ import { Entity, Model, type, enumeration } from 'tapo'
 export default class Named extends Model {
   constructor (source) {
     super()
-    this.parse(source)
+    this.merge(source)
   }
 
   @type(String)
@@ -172,14 +172,14 @@ export default class Named extends Model {
 good
 
 ```
-new Named({ name: 'Tapo', key: 1,  age: 10})
+new Named().parse({ name: 'Tapo', key: 1,  age: 10})
 
 get
 
 Named { name: "Tapo", key: 1,  age: 10 }
 
 
-new Named({ name: 'Tapo', key: 'private key',  age: 10})
+new Named().parse({ name: 'Tapo', key: 'private key',  age: 10})
 
 get
 
@@ -189,7 +189,7 @@ Named { name: "Tapo", key: "private key",  age: 10 }
 error
 
 ```
-new Named({ name: 'Tapo', key: 1,  age: 30})
+new Named().parse({ name: 'Tapo', key: 1,  age: 30})
 
 get
 
@@ -205,7 +205,7 @@ import { Entity, Model, type, to, reverse } from 'tapo'
 export default class Query extends Model {
   constructor (source) {
     super()
-    this.parse(source)
+    this.merge(source)
   }
 
   @from('nickname')
@@ -224,7 +224,7 @@ export default class Query extends Model {
 ```
 
 ```
-const entity = new Query({ nickname: 'tapo', key: '123' })
+const entity = new Query().parse({ nickname: 'tapo', key: '123' })
 
 get
 
@@ -254,9 +254,10 @@ entity.reverse() will ingore `null`, `''`, `undefined` property by default, you 
 
 # private function of entity from model
 
-1. `entity.merge`(source), the parameter `source` can be a json object or a entity, normally use this function to merge some values from other object
-2. `entity.mergein`(source), the parameter `source` can be a json object or a entity, normally use this function to recover entity from the url. this function will auto tranform prop data to the type of defined. eg: http://localhost/logs?name=tapo&page=1&size=10. create entity by `new LogQuery().mergein({ name: 'tapo', page: '1', size: '10' })` get result `LogQuery { name: 'tapo', page: 1, size: 10 }`
-3. `entity.reverse()` transform entity to a json object
+1. `entity.parse`(source), the parameter `source` can be a json object or a entity, normally use this function to merge some values from other object
+2. `entity.merge`(source), the parameter `source` can be a json object or a entity, this will set the attribute value of entity by source attr value (if the source has the same attribute)
+3. `entity.recover`(source), the parameter `source` can be a json object or a entity, normally use this function to recover entity from the url. this function will auto tranform prop data to the type of defined. eg: http://localhost/logs?name=tapo&page=1&size=10. create entity by `new LogQuery().recover({ name: 'tapo', page: '1', size: '10' })` get result `LogQuery { name: 'tapo', page: 1, size: 10 }`
+4. `entity.reverse()` transform entity to a json object
 
 # more
 
@@ -267,7 +268,7 @@ you can define some prop without anotation. it will ignore when create a entity 
 export default class Named extends Model {
   constructor (source) {
     super()
-    this.parse(source)
+    this.merge(source)
   }
 
   loading = false
@@ -282,7 +283,7 @@ export default class Named extends Model {
 ```
 
 ```
-new Named({ loading: true, name: 'tapo' })
+new Named().parse({ loading: true, name: 'tapo' })
 ```
 
 get

@@ -17,7 +17,7 @@ import { Entity, Model, type } from 'tapo'
 export default class Named extends Model {
   constructor (source) {
     super()
-    this.parse(source)
+    this.merge(source)
   }
 
   @type(String)
@@ -28,7 +28,7 @@ export default class Named extends Model {
 例 1:
 
 ```
-new Named({ name: 'Tapo', date: new Date() })
+new Named().parse({ name: 'Tapo', date: new Date() })
 ```
 
 生成类
@@ -40,7 +40,7 @@ Named {name: "Tapo"}
 例 2: `属性与定义不匹配的情况`
 
 ```
-new Named({ date: new Date() })
+new Named().parse({ date: new Date() })
 ```
 
 运行后抛出一个 Error。（可通过`setLogger`自定义是抛出错误还是弹窗提示）
@@ -90,7 +90,7 @@ import { Entity, Model, type, from, nullable, format, validator } from 'tapo'
 export default class Staff extends Named {
   constructor (source) {
     super()
-    this.parse(source)
+    this.merge(source)
   }
 
   @from('author.name')
@@ -110,12 +110,24 @@ export default class Staff extends Named {
   year = ''
 }
 
-new Staff({
+// 通过映射关系赋值
+new Staff().parse({
   name: 'Tapo Mapper',
   author: { name: 'tan' },
   birthday: new Date()
 })
+
+or
+
+// 完全通过实体属性名赋值
+new Staff({
+  name: 'Tapo Mapper',
+  author: 'tan',
+  year: 2021
+})
 ```
+
+get
 
 ```
 Staff { name: 'Tapo Mapper', author: 'tan', email: '', year: 2021 }
@@ -153,7 +165,7 @@ import { Entity, Model, type, enumeration } from 'tapo'
 export default class Named extends Model {
   constructor (source) {
     super()
-    this.parse(source)
+    this.merge(source)
   }
 
   @type(String)
@@ -170,14 +182,14 @@ export default class Named extends Model {
 正常的
 
 ```
-new Named({ name: 'Tapo', key: 1,  age: 10})
+new Named().parse({ name: 'Tapo', key: 1,  age: 10})
 
 生成
 
 Named { name: "Tapo", key: 1,  age: 10 }
 
 
-new Named({ name: 'Tapo', key: 'private key',  age: 10})
+new Named().parse({ name: 'Tapo', key: 'private key',  age: 10})
 
 生成
 
@@ -187,7 +199,7 @@ Named { name: "Tapo", key: "private key",  age: 10 }
 异常的值（30）
 
 ```
-new Named({ name: 'Tapo', key: 1,  age: 30})
+new Named().parse({ name: 'Tapo', key: 1,  age: 30})
 
 报错
 
@@ -203,7 +215,7 @@ import { Entity, Model, type, to, reverse } from 'tapo'
 export default class Query extends Model {
   constructor (source) {
     super()
-    this.parse(source)
+    this.merge(source)
   }
 
   @from('nickname')
@@ -222,7 +234,7 @@ export default class Query extends Model {
 ```
 
 ```
-const entity = new Query({ nickname: 'tapo', key: '123' })
+const entity = new Query().parse({ nickname: 'tapo', key: '123' })
 
 生成类
 
@@ -253,9 +265,10 @@ entity.reverse() 默认将忽略属性值为 `null`, `''`, `undefined`及未定�
 
 # 从 Model 基类继续到的私有方法
 
-1. `entity.merge`(source), 参数 `source` 可能是 json 也可以是实体类, 通常用来合并其他地方的属性值到实体中，如表格组件提交的新的分页或排序数据
-2. `entity.mergein`(source), 通用用来将 url 中的参数还原给实体类. `mergein` 将自动识别`type`定义的类型并转换成指定的类型. 如: http://localhost/logs?name=tapo&page=1&size=10. 用 URL 中的参数合并到实体 `new LogQuery().mergein({ name: 'tapo', page: '1', size: '10' })` 得到结果 `LogQuery { name: 'tapo', page: 1, size: 10 }`
-3. `entity.reverse()` 将实体转换为 json 数据
+1. `entity.parse`(source), 参数 `source` 可能是 json 也可以是实体类, 通常用来合并其他地方的属性值到实体中。一般用于将后端数据通过映射关键转换成实体类
+2. `entity.merge`(source), 参数 `source` 可能是 json 也可以是实体类, 用于其他地方的具有相同属性值覆盖到实体中，如表格组件提交的新的分页或排序数据。一般用于前端自己构造或覆盖属性值
+3. `entity.recover`(source), 通用用来将 url 中的参数还原给实体类. `mergein` 将自动识别`type`定义的类型并转换成指定的类型. 如: http://localhost/logs?name=tapo&page=1&size=10. 用 URL 中的参数合并到实体 `new LogQuery().mergein({ name: 'tapo', page: '1', size: '10' })` 得到结果 `LogQuery { name: 'tapo', page: 1, size: 10 }`
+4. `entity.reverse()` 将实体转换为 json 数据
 
 # 其他
 
@@ -266,7 +279,7 @@ entity.reverse() 默认将忽略属性值为 `null`, `''`, `undefined`及未定�
 export default class Named extends Model {
   constructor (source) {
     super()
-    this.parse(source)
+    this.merge(source)
   }
 
   loading = false
@@ -281,7 +294,7 @@ export default class Named extends Model {
 ```
 
 ```
-new Named({ loading: true, name: 'tapo' })
+new Named().parse({ loading: true, name: 'tapo' })
 ```
 
 生成类
