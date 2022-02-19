@@ -42,7 +42,13 @@ export interface ModelConfig {
   format?: (v: any, source: Record<string, unknown>) => any
   to?: string | undefined
   reverse?: (v: any, source: Record<string, unknown>) => any
+  omit?: boolean
   validator?: (value: any, source: Record<string, unknown>) => any | Array<(value: any, source: Record<string, unknown>) => any>
+}
+
+export interface ReverseOption {
+  lightly?: boolean | undefined
+  exclusion?: string[]
 }
 
 export const field = (config: ModelConfig): any => {
@@ -127,6 +133,16 @@ export const to = (value?: string): any => {
 }
 
 /**
+ * 忽略属性，用于reverse时忽略特定字段
+ * @returns
+ */
+export const omit = (value = true): any => {
+  return function (target: ClassDecorator, name: string) {
+    storage.entity(target.constructor).attr(name).setRule({ omit: value })
+  }
+}
+
+/**
  * 自定义数据格式化转换方法
  * @param value 格式化方法
  * @returns
@@ -174,6 +190,10 @@ export class Model {
    */
   doPrivateParse(attr: Attr, source: any): void {
     const { name, rules } = attr
+
+    if (rules.hasOwnProperty('omit')) {
+      return
+    }
 
     const origin = pick((rules.from || name).split('.'), source)
 
@@ -253,7 +273,10 @@ export class Model {
   doPrivateCopy(source: Record<string, any>): this {
     storage.entity(this.constructor).attrs.forEach((attr) => {
       const { name, rules } = attr
-      if (source.hasOwnProperty(name)) {
+      if (
+        Object.prototype.hasOwnProperty.call(source, name) &&
+        !rules.hasOwnProperty('omit')
+      ) {
         this[name] = source[name]
       }
     })
@@ -319,7 +342,7 @@ export class Model {
     } else {
       const attrs = storage.entity(this.constructor).attrs
       Object.keys(this).forEach((prop) => {
-        if (!source.hasOwnProperty(prop)) {
+        if (!Object.prototype.hasOwnProperty.call(source, prop)) {
           return
         }
         const rules = attrs.find((attr) => attr.name === prop)?.rules
@@ -330,7 +353,11 @@ export class Model {
           return
         }
         const tp = Array.isArray(rules?.type) ? rules.type[0] : rules.type
-        this[prop] = tp(source[prop])
+        if (tp === Boolean) {
+          this[prop] = source[prop] === 'false' ? false : tp(source[prop])
+        } else {
+          this[prop] = tp(source[prop])
+        }
       })
     }
 
@@ -340,12 +367,16 @@ export class Model {
   /**
    * 将实体转换为后端接口需要的JSON对象
    */
-  reverse(option = { lightly: true }): Record<string, unknown> {
+  reverse(option: ReverseOption = { lightly: true, exclusion: [] as string[] }): Record<string, unknown> {
     const json = {} as Record<string, any>
 
     storage.entity(this.constructor).attrs.forEach((attr) => {
       const { name, rules } = attr
-      if (rules.hasOwnProperty('to')) {
+      if (
+        rules.hasOwnProperty('to') &&
+        !rules.hasOwnProperty('omit') &&
+        !option.exclusion?.includes(name)
+      ) {
         const val = rules.reverse ? rules.reverse(this[name], this) : this[name]
         if (
           option.lightly === false ||

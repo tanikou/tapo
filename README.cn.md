@@ -250,6 +250,17 @@ entity.reverse()
 
 entity.reverse() 默认将忽略属性值为 `null`, `''`, `undefined`及未定义 to 的属性不传给后端, 可以使用 `entity.reverse({ lightly: false })` 会将所有定义了 to 的属性都传回去 `{ "userName": "tapo", "privatekey": "base64://123", "addr": "" }`
 
+reverse 参数
+
+```
+interface ReverseOption {
+  // 轻便模式下会忽略值为空字符串的属性不生成到json当中
+  lightly?: boolean | undefined
+  // 强制忽略某些属性到json中，效果等同于配置了omit
+  exclusion?: string[]
+}
+```
+
 # 相关注解
 
 1. @`Enitity` => 注解在类上
@@ -259,15 +270,16 @@ entity.reverse() 默认将忽略属性值为 `null`, `''`, `undefined`及未定�
 5. @`format` => 用于自定义格式化转换数据。例：`@format(v => (v * 60) + '分钟')`
 6. @`enumeration` => 设置数据只能是枚举的值
 7. @`validator` => 自定义校验
-8. @`to` => 定义将属性名转成换其他属性名，一般用于转给后端接口。例:类属性`name`转换成`userName`，`@to('userName')`
-9. @`reverse` => 自定义在 to 时如何转换属性。
-   例: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))`
+8. @`omit` => 在 parse 或者 merge 或者 reverse 时忽略此属性
+9. @`to` => 定义将属性名转成换其他属性名，一般用于转给后端接口。例:类属性`name`转换成`userName`，`@to('userName')`
+10. @`reverse` => 自定义在 to 时如何转换属性。
+    例: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))`
 
 # 从 Model 基类继续到的私有方法
 
 1. `entity.parse`(source), 参数 `source` 可能是 json 也可以是实体类, 通常用来合并其他地方的属性值到实体中。一般用于将后端数据通过映射关键转换成实体类
 2. `entity.merge`(source), 参数 `source` 可能是 json 也可以是实体类, 用于其他地方的具有相同属性值覆盖到实体中，如表格组件提交的新的分页或排序数据。一般用于前端自己构造或覆盖属性值
-3. `entity.recover`(source), 通用用来将 url 中的参数还原给实体类. `mergein` 将自动识别`type`定义的类型并转换成指定的类型. 如: http://localhost/logs?name=tapo&page=1&size=10. 用 URL 中的参数合并到实体 `new LogQuery().mergein({ name: 'tapo', page: '1', size: '10' })` 得到结果 `LogQuery { name: 'tapo', page: 1, size: 10 }`
+3. `entity.recover`(source), 通用用来将 url 中的参数还原给实体类. `recover` 将自动识别`type`定义的类型并转换成指定的类型. 如: http://localhost/logs?name=tapo&page=1&size=10. 用 URL 中的参数合并到实体 `new LogQuery().recover({ name: 'tapo', page: '1', size: '10' })` 得到结果 `LogQuery { name: 'tapo', page: 1, size: 10 }`
 4. `entity.reverse()` 将实体转换为 json 数据
 
 # 其他

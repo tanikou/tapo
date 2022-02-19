@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.reverse = exports.to = exports.validator = exports.nullable = exports.format = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = void 0;
+exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.format = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = void 0;
 /* eslint-disable */
 const storage_1 = __importDefault(require("./storage"));
 let message = `{entity}.{attr} defined as {type}, got: {value}`;
@@ -117,6 +117,16 @@ const to = (value) => {
 };
 exports.to = to;
 /**
+ * 忽略属性，用于reverse时忽略特定字段
+ * @returns
+ */
+const omit = (value = true) => {
+    return function (target, name) {
+        storage_1.default.entity(target.constructor).attr(name).setRule({ omit: value });
+    };
+};
+exports.omit = omit;
+/**
  * 自定义数据格式化转换方法
  * @param value 格式化方法
  * @returns
@@ -157,6 +167,9 @@ class Model {
      */
     doPrivateParse(attr, source) {
         const { name, rules } = attr;
+        if (rules.hasOwnProperty('omit')) {
+            return;
+        }
         const origin = pick((rules.from || name).split('.'), source);
         const value = rules.format ? rules.format(origin, source) : origin;
         if ((value === null || value === undefined) && rules.nullable === true) {
@@ -232,7 +245,8 @@ class Model {
     doPrivateCopy(source) {
         storage_1.default.entity(this.constructor).attrs.forEach((attr) => {
             const { name, rules } = attr;
-            if (source.hasOwnProperty(name)) {
+            if (Object.prototype.hasOwnProperty.call(source, name) &&
+                !rules.hasOwnProperty('omit')) {
                 this[name] = source[name];
             }
         });
@@ -289,7 +303,7 @@ class Model {
             const attrs = storage_1.default.entity(this.constructor).attrs;
             Object.keys(this).forEach((prop) => {
                 var _a;
-                if (!source.hasOwnProperty(prop)) {
+                if (!Object.prototype.hasOwnProperty.call(source, prop)) {
                     return;
                 }
                 const rules = (_a = attrs.find((attr) => attr.name === prop)) === null || _a === void 0 ? void 0 : _a.rules;
@@ -299,7 +313,12 @@ class Model {
                     return;
                 }
                 const tp = Array.isArray(rules === null || rules === void 0 ? void 0 : rules.type) ? rules.type[0] : rules.type;
-                this[prop] = tp(source[prop]);
+                if (tp === Boolean) {
+                    this[prop] = source[prop] === 'false' ? false : tp(source[prop]);
+                }
+                else {
+                    this[prop] = tp(source[prop]);
+                }
             });
         }
         return this;
@@ -307,11 +326,14 @@ class Model {
     /**
      * 将实体转换为后端接口需要的JSON对象
      */
-    reverse(option = { lightly: true }) {
+    reverse(option = { lightly: true, exclusion: [] }) {
         const json = {};
         storage_1.default.entity(this.constructor).attrs.forEach((attr) => {
+            var _a;
             const { name, rules } = attr;
-            if (rules.hasOwnProperty('to')) {
+            if (rules.hasOwnProperty('to') &&
+                !rules.hasOwnProperty('omit') &&
+                !((_a = option.exclusion) === null || _a === void 0 ? void 0 : _a.includes(name))) {
                 const val = rules.reverse ? rules.reverse(this[name], this) : this[name];
                 if (option.lightly === false ||
                     (val !== '' && val !== null) ||

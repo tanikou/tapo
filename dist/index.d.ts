@@ -14,12 +14,23 @@ export class Model implements Record<string, unknown> {
 }
 
 export interface ModelConfig {
-  from?: string
   enumeration?: any[]
-  type?: Function
+  from?: string | undefined
+  type?: Function | Function[]
   nullable?: boolean
   format?: (v: any, source: Record<string, unknown>) => any
-  validator?: Array<(value: any, source: Record<string, unknown>) => any>
+  to?: string | undefined
+  reverse?: (v: any, source: Record<string, unknown>) => any
+  omit?: boolean
+  validator?: (
+    value: any,
+    source: Record<string, unknown>
+  ) => any | Array<(value: any, source: Record<string, unknown>) => any>
+}
+
+export interface ReverseOption {
+  lightly?: boolean | undefined
+  exclusion?: string[]
 }
 
 export function Entity(): any;
@@ -41,6 +52,8 @@ export function validator(value: any): any;
 export function to(value?: string): any;
 
 export function reverse(value: (v: any, me: Record<any, any>) => any): any;
+
+export function omit(value?: boolean): any
 
 export function setMessageFormat(v: string): void;
 

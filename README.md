@@ -240,6 +240,15 @@ get
 
 entity.reverse() will ingore `null`, `''`, `undefined` property by default, you can use `entity.reverse({ lightly: false })` to get `{ "userName": "tapo", "privatekey": "base64://123", "addr": "" }`
 
+```
+interface ReverseOption {
+  // lightly mode will ignore attribute if the value is blank string
+  lightly?: boolean | undefined
+  // ignore attribute
+  exclusion?: string[]
+}
+```
+
 # anotations
 
 1. @`Enitity` => anotation for entity class
@@ -249,8 +258,9 @@ entity.reverse() will ingore `null`, `''`, `undefined` property by default, you 
 5. @`format` => define how to format the original data：`@format(v => (v * 60) + 'miniute')`
 6. @`enumeration` => enumeration
 7. @`validator` => support mult validator
-8. @`to` => define how to format entity to a json object, generally for the backend api. eg:tranfer entity attr`name` to `userName`，`@to('userName')`
-9. @`reverse` => define how to format the entity attr to json attr. eg: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))`
+8. @`omit` => omit this attribute when call functioin parse, merge, reverse
+9. @`to` => define how to format entity to a json object, generally for the backend api. eg:tranfer entity attr`name` to `userName`，`@to('userName')`
+10. @`reverse` => define how to format the entity attr to json attr. eg: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))`
 
 # private function of entity from model
 
