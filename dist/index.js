@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.format = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = void 0;
+exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.converty = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.format = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = void 0;
 /* eslint-disable */
 const storage_1 = __importDefault(require("./storage"));
 let message = `{entity}.{attr} defined as {type}, got: {value}`;
@@ -153,6 +153,24 @@ const pick = (key, source) => {
     const top = key.shift() || '';
     return pick(key, source[top]);
 };
+/**
+ * 将query中的字符串的值转为属性定义的类型的值
+ * @param value query中字符串的值
+ * @param clazz 类型，如String, Number, Boolean, Array等
+ * @returns
+ */
+function converty(value, clazz) {
+    if (clazz === Boolean) {
+        return value === 'false' ? false : clazz(value);
+    }
+    else if (clazz === Array) {
+        return value.split ? value.split(',') : Array.isArray(value) ? value : [];
+    }
+    else {
+        return clazz(value);
+    }
+}
+exports.converty = converty;
 /**
  * Model基类，子类继承后可实现ORM转换
  */
@@ -309,16 +327,11 @@ class Model {
                 const rules = (_a = attrs.find((attr) => attr.name === prop)) === null || _a === void 0 ? void 0 : _a.rules;
                 if (!(rules === null || rules === void 0 ? void 0 : rules.type)) {
                     const tp = Object.getPrototypeOf(this[prop]).constructor;
-                    this[prop] = tp(source[prop]);
+                    this[prop] = converty(source[prop], tp);
                     return;
                 }
                 const tp = Array.isArray(rules === null || rules === void 0 ? void 0 : rules.type) ? rules.type[0] : rules.type;
-                if (tp === Boolean) {
-                    this[prop] = source[prop] === 'false' ? false : tp(source[prop]);
-                }
-                else {
-                    this[prop] = tp(source[prop]);
-                }
+                this[prop] = converty(source[prop], tp);
             });
         }
         return this;
@@ -336,8 +349,7 @@ class Model {
                 !((_a = option.exclusion) === null || _a === void 0 ? void 0 : _a.includes(name))) {
                 const val = rules.reverse ? rules.reverse(this[name], this) : this[name];
                 if (option.lightly === false ||
-                    (val !== '' && val !== null) ||
-                    val !== undefined) {
+                    (val !== '' && val !== null && val !== undefined)) {
                     json[rules.to || name] = val;
                 }
             }

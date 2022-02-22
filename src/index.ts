@@ -43,7 +43,10 @@ export interface ModelConfig {
   to?: string | undefined
   reverse?: (v: any, source: Record<string, unknown>) => any
   omit?: boolean
-  validator?: (value: any, source: Record<string, unknown>) => any | Array<(value: any, source: Record<string, unknown>) => any>
+  validator?: (
+    value: any,
+    source: Record<string, unknown>
+  ) => any | Array<(value: any, source: Record<string, unknown>) => any>
 }
 
 export interface ReverseOption {
@@ -93,7 +96,9 @@ export const enumeration = (value: any[]): any => {
  * @param value 格式化方法
  * @returns
  */
-export const format = (value: (v: any, ori: Record<string, unknown>) => any): any => {
+export const format = (
+  value: (v: any, ori: Record<string, unknown>) => any
+): any => {
   return function (target: ClassDecorator, name: string) {
     storage.entity(target.constructor).attr(name).setRule({ format: value })
   }
@@ -115,7 +120,12 @@ export const nullable = (value = true): any => {
  * @param value 校验方法数组
  * @returns
  */
-export const validator = (value: (value: any, source: Record<string, unknown>) => any | Array<(value: any, source: Record<string, unknown>) => any>): any => {
+export const validator = (
+  value: (
+    value: any,
+    source: Record<string, unknown>
+  ) => any | Array<(value: any, source: Record<string, unknown>) => any>
+): any => {
   return function (target: ClassDecorator, name: string) {
     storage.entity(target.constructor).attr(name).setRule({ validator: value })
   }
@@ -147,7 +157,9 @@ export const omit = (value = true): any => {
  * @param value 格式化方法
  * @returns
  */
-export const reverse = (value: (v: any, ori: Record<string, unknown>) => any): any => {
+export const reverse = (
+  value: (v: any, ori: Record<string, unknown>) => any
+): any => {
   return function (target: ClassDecorator, name: string) {
     storage.entity(target.constructor).attr(name).setRule({ reverse: value })
   }
@@ -171,6 +183,22 @@ const pick = (key: string[], source: Record<string, any>): any => {
   const top = key.shift() || ''
 
   return pick(key, source[top])
+}
+
+/**
+ * 将query中的字符串的值转为属性定义的类型的值
+ * @param value query中字符串的值
+ * @param clazz 类型，如String, Number, Boolean, Array等
+ * @returns
+ */
+export function converty(value: any, clazz: Function): any {
+  if (clazz === Boolean) {
+    return value === 'false' ? false : clazz(value)
+  } else if (clazz === Array) {
+    return value.split ? value.split(',') : Array.isArray(value) ? value : []
+  } else {
+    return clazz(value)
+  }
 }
 
 /**
@@ -349,15 +377,11 @@ export class Model {
 
         if (!rules?.type) {
           const tp = Object.getPrototypeOf(this[prop]).constructor
-          this[prop] = tp(source[prop])
+          this[prop] = converty(source[prop], tp)
           return
         }
         const tp = Array.isArray(rules?.type) ? rules.type[0] : rules.type
-        if (tp === Boolean) {
-          this[prop] = source[prop] === 'false' ? false : tp(source[prop])
-        } else {
-          this[prop] = tp(source[prop])
-        }
+        this[prop] = converty(source[prop], tp)
       })
     }
 
@@ -367,7 +391,9 @@ export class Model {
   /**
    * 将实体转换为后端接口需要的JSON对象
    */
-  reverse(option: ReverseOption = { lightly: true, exclusion: [] as string[] }): Record<string, unknown> {
+  reverse(
+    option: ReverseOption = { lightly: true, exclusion: [] as string[] }
+  ): Record<string, unknown> {
     const json = {} as Record<string, any>
 
     storage.entity(this.constructor).attrs.forEach((attr) => {
@@ -380,8 +406,7 @@ export class Model {
         const val = rules.reverse ? rules.reverse(this[name], this) : this[name]
         if (
           option.lightly === false ||
-          (val !== '' && val !== null) ||
-          val !== undefined
+          (val !== '' && val !== null && val !== undefined)
         ) {
           json[rules.to || name] = val
         }
