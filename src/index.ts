@@ -201,6 +201,33 @@ export function converty(value: any, clazz: Function): any {
   }
 }
 
+export function param(...ctor: any) {
+  return function (target: any, key: string, descriptor: PropertyDescriptor) {
+    var oldValue = descriptor.value
+
+    descriptor.value = function () {
+      if (!ctor) {
+        return oldValue.apply(this, arguments)
+      }
+      if (arguments.length === 0) {
+        errorLogger.error(`${target.name}.${key}(${ctor.name}) got undefined`)
+        return oldValue.apply(this, arguments)
+      }
+      if (ctor.find((v: any, i: number) => arguments[i] && v !== arguments[i].constructor)) {
+        const real = [...arguments]
+          .map((v: any) => v.constructor.name)
+          .join(', ')
+        const need = ctor.map((v: any) => v.name).join(', ')
+        errorLogger.error(`${target.name}.${key}(${real} <> ${need})`)
+      }
+
+      return oldValue.apply(this, arguments)
+    }
+
+    return descriptor
+  }
+}
+
 /**
  * Model基类，子类继承后可实现ORM转换
  */

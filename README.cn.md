@@ -320,3 +320,31 @@ Named { loading: false, name: "tapo" }
 使用从 model 继承的方法 `named.reverse()` 生成 json `{ name: 'tapo' }`
 
 一般在表格的行操作需要加防抖时特别好用
+
+# 方法执行时参数校验
+
+如果你项目中没有用到 TS，又需要在开发阶段发时方法执行时获得的参数错误情形，即更多的发现出错的可能，可以使用@param 进行注解
+
+```
+import { param } from 'tapo'
+import { Log } from '../entity/log'
+
+export class LogRepository extends Repository {
+  @param(Log)
+  static async create (row) {
+    return axios.post('/system/log', row)
+  }
+}
+```
+
+```
+LogRepository.create(new Member())
+```
+
+get
+
+```
+Error: LogRepository.create(Member <> Log)
+```
+
+此错误信息也可以通过设置`setLogger`处理异常信息

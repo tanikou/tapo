@@ -55,6 +55,8 @@ export function reverse(value: (v: any, me: Record<any, any>) => any): any;
 
 export function omit(value?: boolean): any
 
+export function param(...value: any): any
+
 export function setMessageFormat(v: string): void;
 
 export function setLogger(logger: { error: (v: string) => void }): void;

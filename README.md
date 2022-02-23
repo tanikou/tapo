@@ -307,3 +307,29 @@ Named { loading: false, name: "tapo" }
 `named.reverse()` will get json object `{ name: 'tapo' }`
 
 especially useful for data lock in table
+
+# method parameter check in runtime
+
+if your project do not support typescript, but you want to check the parameter in runtime
+
+```
+import { param } from 'tapo'
+import { Log } from '../entity/log'
+
+export class LogRepository extends Repository {
+  @param(Log)
+  static async create (row) {
+    return axios.post('/system/log', row)
+  }
+}
+```
+
+```
+LogRepository.create(new Member())
+```
+
+get
+
+```
+Error: LogRepository.create(Member <> Log)
+```

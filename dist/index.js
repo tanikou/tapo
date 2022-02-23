@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.converty = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.format = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = void 0;
+exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.param = exports.converty = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.format = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = void 0;
 /* eslint-disable */
 const storage_1 = __importDefault(require("./storage"));
 let message = `{entity}.{attr} defined as {type}, got: {value}`;
@@ -171,6 +171,30 @@ function converty(value, clazz) {
     }
 }
 exports.converty = converty;
+function param(...ctor) {
+    return function (target, key, descriptor) {
+        var oldValue = descriptor.value;
+        descriptor.value = function () {
+            if (!ctor) {
+                return oldValue.apply(this, arguments);
+            }
+            if (arguments.length === 0) {
+                errorLogger.error(`${target.name}.${key}(${ctor.name}) got undefined`);
+                return oldValue.apply(this, arguments);
+            }
+            if (ctor.find((v, i) => arguments[i] && v !== arguments[i].constructor)) {
+                const real = [...arguments]
+                    .map((v) => v.constructor.name)
+                    .join(', ');
+                const need = ctor.map((v) => v.name).join(', ');
+                errorLogger.error(`${target.name}.${key}(${real} <> ${need})`);
+            }
+            return oldValue.apply(this, arguments);
+        };
+        return descriptor;
+    };
+}
+exports.param = param;
 /**
  * Model基类，子类继承后可实现ORM转换
  */
