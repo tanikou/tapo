@@ -213,7 +213,7 @@ class Model {
             return;
         }
         const origin = pick((rules.from || name).split('.'), source);
-        const value = rules.format ? rules.format(origin, source) : origin;
+        const value = rules.format ? rules.format.call(this, origin, source) : origin;
         if ((value === null || value === undefined) && rules.nullable === true) {
             return;
         }
@@ -371,7 +371,7 @@ class Model {
             if (rules.hasOwnProperty('to') &&
                 !rules.hasOwnProperty('omit') &&
                 !((_a = option.exclusion) === null || _a === void 0 ? void 0 : _a.includes(name))) {
-                const val = rules.reverse ? rules.reverse(this[name], this) : this[name];
+                const val = rules.reverse ? rules.reverse.call(this, this[name], this) : this[name];
                 if (option.lightly === false ||
                     (val !== '' && val !== null && val !== undefined)) {
                     json[rules.to || name] = val;

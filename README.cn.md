@@ -2,6 +2,15 @@
 
 `Entity可继承，简单配置，可直接用作vue组件prop的类型限制。支持TS。零依赖`
 
+1. 强化数据结构及类型
+2. 强化组件参数类型
+3. 快速与后端接口数据属性对应(后端到前端，前端到后端)及应对字段名变更
+4. 强化数据校验，在开发阶段提前发现数据问题或代码处理异常
+5. 强化接口参数校验，提前发现函数调用时异常
+6. 类支持继承复用，可扩展方法，减少重复代码
+7. 分离数据转换处理，使代码其他位置只关心业务逻辑，不再包含数据转换逻辑
+8. 快速还原恢复数据（如从 URL 中恢复成业务数据）
+
 # 安装
 
 ```
@@ -267,20 +276,20 @@ interface ReverseOption {
 2. @`from` => 定义字段数据来源，可多级结构。例`@from('company.name')`
 3. @`type` => 定义字段数据类型，可是基础数据类型也可以类，可设置多类型,例: `@type([Number, String])`
 4. @`nullable` => 设置是否允许为空，即允许值为`null`或`undefined`
-5. @`format` => 用于自定义格式化转换数据。例：`@format(v => (v * 60) + '分钟')`
+5. @`format` => 用于自定义格式化转换数据。例：`@format((v, me) => (v * me.unit) + '分钟')`。在 format 中不要用 this，因为属性转换有先后顺序，有可能引用的时候对应的属性还没有转换。需要使用第二个参数拿到原始数据自己处理
 6. @`enumeration` => 设置数据只能是枚举的值
 7. @`validator` => 自定义校验
 8. @`omit` => 在 parse 或者 merge 或者 reverse 时忽略此属性
 9. @`to` => 定义将属性名转成换其他属性名，一般用于转给后端接口。例:类属性`name`转换成`userName`，`@to('userName')`
 10. @`reverse` => 自定义在 to 时如何转换属性。
-    例: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))`
+    例: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))` 或者使用 this 引用其他属性：`@reverse(function(v) { return this.status === 1 ? v : '' })`
 
 # 从 Model 基类继续到的私有方法
 
 1. `entity.parse`(source), 参数 `source` 可能是 json 也可以是实体类, 通常用来合并其他地方的属性值到实体中。一般用于将后端数据通过映射关键转换成实体类
 2. `entity.merge`(source), 参数 `source` 可能是 json 也可以是实体类, 用于其他地方的具有相同属性值覆盖到实体中，如表格组件提交的新的分页或排序数据。一般用于前端自己构造或覆盖属性值
 3. `entity.recover`(source), 通用用来将 url 中的参数还原给实体类. `recover` 将自动识别`type`定义的类型并转换成指定的类型. 如: http://localhost/logs?name=tapo&page=1&size=10. 用 URL 中的参数合并到实体 `new LogQuery().recover({ name: 'tapo', page: '1', size: '10' })` 得到结果 `LogQuery { name: 'tapo', page: 1, size: 10 }`
-4. `entity.reverse()` 将实体转换为 json 数据
+4. `entity.reverse()` 将实体转换为 json 数据，一般用于提交给后端
 
 # 其他
 

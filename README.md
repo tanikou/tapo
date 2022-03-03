@@ -255,12 +255,14 @@ interface ReverseOption {
 2. @`from` => define from original prop. eg: `@from('company.name')`
 3. @`type` => define data type. support mult type. eg: `@type([Number, String])`
 4. @`nullable` => allow data can be `null` or `undefined`
-5. @`format` => define how to format the original data：`@format(v => (v * 60) + 'miniute')`
+5. @`format` => define how to format the original data. eg: `@format((v, me) => (v * me.unit) + 'miniute')`. do not use this in format function
 6. @`enumeration` => enumeration
 7. @`validator` => support mult validator
 8. @`omit` => omit this attribute when call functioin parse, merge, reverse
 9. @`to` => define how to format entity to a json object, generally for the backend api. eg:tranfer entity attr`name` to `userName`，`@to('userName')`
-10. @`reverse` => define how to format the entity attr to json attr. eg: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))`
+10. @`reverse` => define how to format the entity attr to json attr.
+    eg: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))`
+    or : `@reverse(function(v) { return this.status === 1 ? v : '' })`
 
 # private function of entity from model
 

@@ -252,7 +252,7 @@ export class Model {
 
     const origin = pick((rules.from || name).split('.'), source)
 
-    const value = rules.format ? rules.format(origin, source) : origin
+    const value = rules.format ? rules.format.call(this, origin, source) : origin
     if ((value === null || value === undefined) && rules.nullable === true) {
       return
     }
@@ -430,7 +430,7 @@ export class Model {
         !rules.hasOwnProperty('omit') &&
         !option.exclusion?.includes(name)
       ) {
-        const val = rules.reverse ? rules.reverse(this[name], this) : this[name]
+        const val = rules.reverse ? rules.reverse.call(this, this[name], this) : this[name]
         if (
           option.lightly === false ||
           (val !== '' && val !== null && val !== undefined)
