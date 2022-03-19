@@ -3,17 +3,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.param = exports.converty = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.format = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = void 0;
+exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.param = exports.converty = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.format = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = exports.defaults = void 0;
 /* eslint-disable */
 const storage_1 = __importDefault(require("./storage"));
-let message = `{entity}.{attr} defined as {type}, got: {value}`;
-let errorLogger = {
-    error(v) {
-        throw new ModelError(v);
+exports.defaults = {
+    message: '{entity}.{attr} defined as {type}, got: {value}',
+    lightly: true,
+    logger: {
+        error(v) {
+            throw new ModelError(v);
+        },
     },
 };
-let notify = ({ entity = '', attr = '', type = '', value = '' }) => {
-    errorLogger.error(message
+const notify = ({ entity = '', attr = '', type = '', value = '' }) => {
+    exports.defaults.logger.error(exports.defaults.message
         .replace('{entity}', entity)
         .replace('{attr}', attr)
         .replace('{type}', type)
@@ -173,13 +176,13 @@ function converty(value, clazz) {
 exports.converty = converty;
 function param(...ctor) {
     return function (target, key, descriptor) {
-        var oldValue = descriptor.value;
+        const oldValue = descriptor.value;
         descriptor.value = function () {
             if (!ctor) {
                 return oldValue.apply(this, arguments);
             }
             if (arguments.length === 0) {
-                errorLogger.error(`${target.name}.${key}(${ctor.name}) got undefined`);
+                exports.defaults.logger.error(`${target.name}.${key}(${ctor.name}) got undefined`);
                 return oldValue.apply(this, arguments);
             }
             if (ctor.find((v, i) => arguments[i] && v !== arguments[i].constructor)) {
@@ -187,7 +190,7 @@ function param(...ctor) {
                     .map((v) => v.constructor.name)
                     .join(', ');
                 const need = ctor.map((v) => v.name).join(', ');
-                errorLogger.error(`${target.name}.${key}(${real} <> ${need})`);
+                exports.defaults.logger.error(`${target.name}.${key}(${real} <> ${need})`);
             }
             return oldValue.apply(this, arguments);
         };
@@ -213,7 +216,9 @@ class Model {
             return;
         }
         const origin = pick((rules.from || name).split('.'), source);
-        const value = rules.format ? rules.format.call(this, origin, source) : origin;
+        const value = rules.format
+            ? rules.format.call(this, origin, source)
+            : origin;
         if ((value === null || value === undefined) && rules.nullable === true) {
             return;
         }
@@ -363,16 +368,18 @@ class Model {
     /**
      * 将实体转换为后端接口需要的JSON对象
      */
-    reverse(option = { lightly: true, exclusion: [] }) {
+    reverse(option = { exclusion: [] }) {
         const json = {};
         storage_1.default.entity(this.constructor).attrs.forEach((attr) => {
-            var _a;
+            var _a, _b;
             const { name, rules } = attr;
             if (rules.hasOwnProperty('to') &&
                 !rules.hasOwnProperty('omit') &&
                 !((_a = option.exclusion) === null || _a === void 0 ? void 0 : _a.includes(name))) {
-                const val = rules.reverse ? rules.reverse.call(this, this[name], this) : this[name];
-                if (option.lightly === false ||
+                const val = rules.reverse
+                    ? rules.reverse.call(this, this[name], this)
+                    : this[name];
+                if (((_b = option.lightly) !== null && _b !== void 0 ? _b : exports.defaults.lightly) === false ||
                     (val !== '' && val !== null && val !== undefined)) {
                     json[rules.to || name] = val;
                 }
@@ -398,10 +405,10 @@ const Entity = () => {
 };
 exports.Entity = Entity;
 const setMessageFormat = (v) => {
-    message = v;
+    exports.defaults.message = v;
 };
 exports.setMessageFormat = setMessageFormat;
 const setLogger = (logger) => {
-    errorLogger = logger;
+    exports.defaults.logger = logger;
 };
 exports.setLogger = setLogger;

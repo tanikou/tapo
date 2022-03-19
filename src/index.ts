@@ -1,17 +1,19 @@
 /* eslint-disable */
 import storage, { Attr } from './storage'
 
-let message = `{entity}.{attr} defined as {type}, got: {value}`
-
-let errorLogger = {
-  error(v: string): void {
-    throw new ModelError(v)
+export const defaults = {
+  message: '{entity}.{attr} defined as {type}, got: {value}',
+  lightly: true,
+  logger: {
+    error(v: string): void {
+      throw new ModelError(v)
+    },
   },
 }
 
-let notify = ({ entity = '', attr = '', type = '', value = '' }) => {
-  errorLogger.error(
-    message
+const notify = ({ entity = '', attr = '', type = '', value = '' }) => {
+  defaults.logger.error(
+    defaults.message
       .replace('{entity}', entity)
       .replace('{attr}', attr)
       .replace('{type}', type)
@@ -203,22 +205,26 @@ export function converty(value: any, clazz: Function): any {
 
 export function param(...ctor: any) {
   return function (target: any, key: string, descriptor: PropertyDescriptor) {
-    var oldValue = descriptor.value
+    const oldValue = descriptor.value
 
     descriptor.value = function () {
       if (!ctor) {
         return oldValue.apply(this, arguments)
       }
       if (arguments.length === 0) {
-        errorLogger.error(`${target.name}.${key}(${ctor.name}) got undefined`)
+        defaults.logger.error(`${target.name}.${key}(${ctor.name}) got undefined`)
         return oldValue.apply(this, arguments)
       }
-      if (ctor.find((v: any, i: number) => arguments[i] && v !== arguments[i].constructor)) {
+      if (
+        ctor.find(
+          (v: any, i: number) => arguments[i] && v !== arguments[i].constructor
+        )
+      ) {
         const real = [...arguments]
           .map((v: any) => v.constructor.name)
           .join(', ')
         const need = ctor.map((v: any) => v.name).join(', ')
-        errorLogger.error(`${target.name}.${key}(${real} <> ${need})`)
+        defaults.logger.error(`${target.name}.${key}(${real} <> ${need})`)
       }
 
       return oldValue.apply(this, arguments)
@@ -252,7 +258,9 @@ export class Model {
 
     const origin = pick((rules.from || name).split('.'), source)
 
-    const value = rules.format ? rules.format.call(this, origin, source) : origin
+    const value = rules.format
+      ? rules.format.call(this, origin, source)
+      : origin
     if ((value === null || value === undefined) && rules.nullable === true) {
       return
     }
@@ -419,7 +427,7 @@ export class Model {
    * 将实体转换为后端接口需要的JSON对象
    */
   reverse(
-    option: ReverseOption = { lightly: true, exclusion: [] as string[] }
+    option: ReverseOption = { exclusion: [] as string[] }
   ): Record<string, unknown> {
     const json = {} as Record<string, any>
 
@@ -430,9 +438,11 @@ export class Model {
         !rules.hasOwnProperty('omit') &&
         !option.exclusion?.includes(name)
       ) {
-        const val = rules.reverse ? rules.reverse.call(this, this[name], this) : this[name]
+        const val = rules.reverse
+          ? rules.reverse.call(this, this[name], this)
+          : this[name]
         if (
-          option.lightly === false ||
+          (option.lightly ?? defaults.lightly) === false ||
           (val !== '' && val !== null && val !== undefined)
         ) {
           json[rules.to || name] = val
@@ -460,9 +470,9 @@ export const Entity = () => {
 }
 
 export const setMessageFormat = (v: string): void => {
-  message = v
+  defaults.message = v
 }
 
 export const setLogger = (logger: { error: (v: string) => void }): void => {
-  errorLogger = logger
+  defaults.logger = logger
 }
