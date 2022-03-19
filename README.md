@@ -249,7 +249,15 @@ interface ReverseOption {
 }
 ```
 
-# anotations
+# set lightly for global
+
+```
+import { defaults } from 'tapo'
+
+defaults.lightly = false
+```
+
+# decorators
 
 1. @`Enitity` => anotation for entity class
 2. @`from` => define from original prop. eg: `@from('company.name')`

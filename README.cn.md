@@ -270,7 +270,15 @@ interface ReverseOption {
 }
 ```
 
-# 相关注解
+# 全局设置 lightly
+
+```
+import { defaults } from 'tapo'
+
+defaults.lightly = false
+```
+
+# 其他装饰器
 
 1. @`Enitity` => 注解在类上
 2. @`from` => 定义字段数据来源，可多级结构。例`@from('company.name')`
