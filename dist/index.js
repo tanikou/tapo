@@ -211,6 +211,7 @@ class Model {
      * @returns
      */
     doPrivateParse(attr, source) {
+        var _a;
         const { name, rules } = attr;
         if (rules.hasOwnProperty('omit')) {
             return;
@@ -219,7 +220,17 @@ class Model {
         const value = rules.format
             ? rules.format.call(this, origin, source)
             : origin;
-        if ((value === null || value === undefined) && rules.nullable === true) {
+        if (value === null || value === undefined) {
+            if (rules.nullable !== true) {
+                notify({
+                    entity: this.constructor.name,
+                    attr: name,
+                    type: Array.isArray(rules.type)
+                        ? rules.type.map((v) => v.name).join(', ')
+                        : (_a = rules.type) === null || _a === void 0 ? void 0 : _a.name,
+                    value,
+                });
+            }
             return;
         }
         this[name] = value;
