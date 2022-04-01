@@ -212,7 +212,9 @@ export function param(...ctor: any) {
         return oldValue.apply(this, arguments)
       }
       if (arguments.length === 0) {
-        defaults.logger.error(`${target.name}.${key}(${ctor.name}) got undefined`)
+        defaults.logger.error(
+          `${target.name}.${key}(${ctor.name}) got undefined`
+        )
         return oldValue.apply(this, arguments)
       }
       if (
@@ -261,7 +263,18 @@ export class Model {
     const value = rules.format
       ? rules.format.call(this, origin, source)
       : origin
-    if ((value === null || value === undefined) && rules.nullable === true) {
+
+    if (value === null || value === undefined) {
+      if (rules.nullable !== true) {
+        notify({
+          entity: this.constructor.name,
+          attr: name,
+          type: Array.isArray(rules.type)
+            ? rules.type.map((v) => v.name).join(', ')
+            : rules.type?.name,
+          value,
+        })
+      }
       return
     }
 

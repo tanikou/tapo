@@ -1,6 +1,6 @@
 {
   "name": "tapo",
-  "version": "2.7.5",
+  "version": "2.7.6",
   "description": "a tiny and simple entity mapper for frontend",
   "homepage": "https://github.com/tanikou/tapo",
   "main": "./dist/index.js",
