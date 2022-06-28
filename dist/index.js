@@ -3,10 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.param = exports.converty = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.format = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = exports.defaults = void 0;
+exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.param = exports.converty = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.form = exports.column = exports.recover = exports.format = exports.parse = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = exports.defaults = void 0;
 /* eslint-disable */
 const storage_1 = __importDefault(require("./storage"));
 exports.defaults = {
+    storage: storage_1.default,
     message: '{entity}.{attr} defined as {type}, got: {value}',
     lightly: true,
     logger: {
@@ -27,12 +28,14 @@ class ModelError extends Error {
         super(message);
         this.name = new.target.name;
         if (typeof Error.captureStackTrace === 'function') {
+            ;
             Error.captureStackTrace(this, new.target);
         }
         if (typeof Object.setPrototypeOf === 'function') {
             Object.setPrototypeOf(this, new.target.prototype);
         }
         else {
+            ;
             this.__proto__ = new.target.prototype;
         }
     }
@@ -80,12 +83,49 @@ exports.enumeration = enumeration;
  * @param value 格式化方法
  * @returns
  */
-const format = (value) => {
+const parse = (value) => {
     return function (target, name) {
-        storage_1.default.entity(target.constructor).attr(name).setRule({ format: value });
+        const attr = storage_1.default.entity(target.constructor).attr(name);
+        const ref = (value.toString().match(/this\.[a-zA-Z\d_]+/g) || []);
+        const dep = ref.map((v) => v.replace(/^this\s*\./, ''));
+        if (dep.length > 0) {
+            attr.setRule({ dep });
+        }
+        attr.setRule({ parse: value });
     };
 };
-exports.format = format;
+exports.parse = parse;
+/**
+ * 定义数据格式化转换方法。parse的别名
+ * @param value 格式化方法
+ * @returns
+ */
+exports.format = exports.parse;
+/**
+ * 定义如何从query中还原数据
+ * @param value 还原方法
+ * @returns
+ */
+const recover = (value) => {
+    return function (target, name) {
+        storage_1.default.entity(target.constructor).attr(name).setRule({ recover: value });
+    };
+};
+exports.recover = recover;
+const column = (value) => {
+    return function (target, name) {
+        value.prop = name;
+        storage_1.default.entity(target.constructor).attr(name).setRule({ column: value });
+    };
+};
+exports.column = column;
+const form = (value) => {
+    return function (target, name) {
+        value.prop = name;
+        storage_1.default.entity(target.constructor).attr(name).setRule({ form: value });
+    };
+};
+exports.form = form;
 /**
  * 标记此属性可以为null或者undefined
  * @param value = true, true可以为空，false则不可
@@ -217,9 +257,7 @@ class Model {
             return;
         }
         const origin = pick((rules.from || name).split('.'), source);
-        const value = rules.format
-            ? rules.format.call(this, origin, source)
-            : origin;
+        const value = rules.parse ? rules.parse.call(this, origin, source) : origin;
         if (value === null || value === undefined) {
             if (rules.nullable !== true) {
                 notify({
@@ -286,14 +324,6 @@ class Model {
                 });
             }
         }
-        if (rules.validator) {
-            ;
-            (Array.isArray(rules.validator)
-                ? rules.validator
-                : [rules.validator]).forEach((func) => {
-                func(value);
-            });
-        }
     }
     /**
      * 从来源对象中复制属性到实休
@@ -325,8 +355,20 @@ class Model {
             this.doPrivateCopy(source);
         }
         else {
-            storage_1.default.entity(this.constructor).attrs.forEach((attr) => {
+            const attrs = storage_1.default.entity(this.constructor).attrs;
+            attrs.forEach((attr) => {
                 this.doPrivateParse(attr, source);
+            });
+            attrs.forEach((attr) => {
+                // 转换完成后再过validator避免没转换完而引起的数据值异常
+                if (attr.rules.validator) {
+                    ;
+                    (Array.isArray(attr.rules.validator)
+                        ? attr.rules.validator
+                        : [attr.rules.validator]).forEach((func) => {
+                        func.call(this, this[attr.name], this);
+                    });
+                }
             });
         }
         return this;
@@ -365,12 +407,16 @@ class Model {
                     return;
                 }
                 const rules = (_a = attrs.find((attr) => attr.name === prop)) === null || _a === void 0 ? void 0 : _a.rules;
-                if (!(rules === null || rules === void 0 ? void 0 : rules.type)) {
-                    const tp = Object.getPrototypeOf(this[prop]).constructor;
+                if (rules === null || rules === void 0 ? void 0 : rules.recover) {
+                    this[prop] = rules.recover.call(this, source[prop], source);
+                    return;
+                }
+                if (rules === null || rules === void 0 ? void 0 : rules.type) {
+                    const tp = Array.isArray(rules === null || rules === void 0 ? void 0 : rules.type) ? rules.type[0] : rules.type;
                     this[prop] = converty(source[prop], tp);
                     return;
                 }
-                const tp = Array.isArray(rules === null || rules === void 0 ? void 0 : rules.type) ? rules.type[0] : rules.type;
+                const tp = Object.getPrototypeOf(this[prop]).constructor;
                 this[prop] = converty(source[prop], tp);
             });
         }
@@ -398,6 +444,13 @@ class Model {
         });
         return json;
     }
+    decorators(name) {
+        console.log(storage_1.default.entity(this.constructor));
+        return storage_1.default
+            .entity(this.constructor)
+            .attrs.map((attr) => attr.rules[name])
+            .filter((v) => v);
+    }
 }
 exports.Model = Model;
 /**
@@ -407,11 +460,18 @@ exports.Model = Model;
 const Entity = () => {
     // eslint-disable-next-line @typescript-eslint/ban-types
     return function (target) {
+        const entity = storage_1.default.entity(target);
         const parent = Object.getPrototypeOf(target.prototype);
         if (parent.constructor.name !== 'Object' && target !== parent.constructor) {
             const ex = storage_1.default.entity(parent.constructor).attrs;
-            storage_1.default.entity(target).merge(ex);
+            entity.merge(ex);
         }
+        entity.attrs = entity.attrs.sort((prev, next) => {
+            if (!prev.rules.dep || prev.rules.dep.length === 0) {
+                return -1;
+            }
+            return prev.rules.dep.includes(next.name) ? 1 : -1;
+        });
     };
 };
 exports.Entity = Entity;

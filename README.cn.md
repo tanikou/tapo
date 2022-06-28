@@ -93,7 +93,7 @@ setLogger({
 # `继承` 其他实体类 及 更多 `注解`
 
 ```
-import { Entity, Model, type, from, nullable, format, validator } from 'tapo'
+import { Entity, Model, type, from, nullable, parse, validator } from 'tapo'
 
 @Entity()
 export default class Staff extends Named {
@@ -112,7 +112,7 @@ export default class Staff extends Named {
 
   @from('birthday')
   @type(Number)
-  @format(v => v.getFullYear())
+  @parse(v => v.getFullYear())
   @validator([
     (v) => v.getFullYear() > 2020
   ])
@@ -257,7 +257,7 @@ entity.reverse()
 { "userName": "tapo", "privatekey": "base64://123" }
 ```
 
-entity.reverse() 默认将忽略属性值为 `null`, `''`, `undefined`及未定义 to 的属性不传给后端, 可以使用 `entity.reverse({ lightly: false })` 会将所有定义了 to 的属性都传回去 `{ "userName": "tapo", "privatekey": "base64://123", "addr": "" }`
+entity.reverse() 默认将忽略属性值为 `null`, `''`, `undefined`及未定义 to 的属性,不传值给后端, 可以使用 `entity.reverse({ lightly: false })` 会将所有定义了 to 的属性都传回去 `{ "userName": "tapo", "privatekey": "base64://123", "addr": "" }`
 
 reverse 参数
 
@@ -284,13 +284,15 @@ defaults.lightly = false
 2. @`from` => 定义字段数据来源，可多级结构。例`@from('company.name')`
 3. @`type` => 定义字段数据类型，可是基础数据类型也可以类，可设置多类型,例: `@type([Number, String])`
 4. @`nullable` => 设置是否允许为空，即允许值为`null`或`undefined`
-5. @`format` => 用于自定义格式化转换数据。例：`@format((v, me) => (v * me.unit) + '分钟')`。在 format 中不要用 this，因为属性转换有先后顺序，有可能引用的时候对应的属性还没有转换。需要使用第二个参数拿到原始数据自己处理
+5. @`parse` => 用于自定义格式化转换数据。例：`@parse((v, me) => (v * me.unit) + '分钟')`。从 V2.8.1 开始支持优化转换通过`this`引用到的其他属性。也可以通过箭头函数使用第二个参数拿到原始数据自己处理。
 6. @`enumeration` => 设置数据只能是枚举的值
 7. @`validator` => 自定义校验
 8. @`omit` => 在 parse 或者 merge 或者 reverse 时忽略此属性
 9. @`to` => 定义将属性名转成换其他属性名，一般用于转给后端接口。例:类属性`name`转换成`userName`，`@to('userName')`
 10. @`reverse` => 自定义在 to 时如何转换属性。
     例: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))` 或者使用 this 引用其他属性：`@reverse(function(v) { return this.status === 1 ? v : '' })`
+11. @`recover` => 定义如何将字符串值转换为属性值，如`@recover(Date)`或`@recover(v => new Date(Number(v)))`，例从 query 中`date[]=1655827200000&date[]=1656086400000`还原为`date: [new Date(1655827200000), new Date(1656086400000)]`。如果有指定`recover`则使用指定的类型转换，如果没有配置类型则用配置的类型进行初始化，没有配置则默认用属性的默认值的类型进行初始化，基础数据类型均可自动转换
+12. @`format` => 等价于@`parse`
 
 # 从 Model 基类继续到的私有方法
 
@@ -337,6 +339,43 @@ Named { loading: false, name: "tapo" }
 使用从 model 继承的方法 `named.reverse()` 生成 json `{ name: 'tapo' }`
 
 一般在表格的行操作需要加防抖时特别好用
+
+# use this in parse function
+
+默认情况下将会按你定义的属性从上向下一个一个的进行转换属性值。但如果你在某个方法中使用了 this.xxx，则将会优化转换你引用到的 xxx 属性。注意不要相互交叉引用否则可能会出问题
+
+```
+@Entity()
+export class Tp extends Model {
+  constructor (source?: Record<string, unknown>) {
+    super()
+    this.merge(source)
+  }
+
+  @parse(function (this: Tp, v) {
+    console.log(v, this.id)
+    return v
+  })
+  @nullable()
+  @type(String)
+  @to()
+  key = ''
+
+  @parse((v) => {
+    console.log(v)
+    return v
+  })
+  @type(Number)
+  @to()
+  id = 0
+}
+
+new Tp().parse({ id: 1, key: '2' })
+
+输出:
+1
+2 1
+```
 
 # 方法执行时参数校验
 

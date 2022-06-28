@@ -86,7 +86,7 @@ setLogger({
 # `extend` others and more `anotations`
 
 ```
-import { Entity, Model, type, from, nullable, format, validator } from 'tapo'
+import { Entity, Model, type, from, nullable, parse, validator } from 'tapo'
 
 @Entity()
 export default class Staff extends Named {
@@ -105,7 +105,7 @@ export default class Staff extends Named {
 
   @from('birthday')
   @type(Number)
-  @format(v => v.getFullYear())
+  @parse(v => v.getFullYear())
   @validator([
     (v) => v.getFullYear() > 2020
   ])
@@ -263,7 +263,7 @@ defaults.lightly = false
 2. @`from` => define from original prop. eg: `@from('company.name')`
 3. @`type` => define data type. support mult type. eg: `@type([Number, String])`
 4. @`nullable` => allow data can be `null` or `undefined`
-5. @`format` => define how to format the original data. eg: `@format((v, me) => (v * me.unit) + 'miniute')`. do not use this in format function
+5. @`parse` => define how to parse the original data. eg: `@parse((v, me) => (v * me.unit) + 'miniute')`. `this` keyword in parse function is supported from V2.8.1
 6. @`enumeration` => enumeration
 7. @`validator` => support mult validator
 8. @`omit` => omit this attribute when call functioin parse, merge, reverse
@@ -271,6 +271,8 @@ defaults.lightly = false
 10. @`reverse` => define how to format the entity attr to json attr.
     eg: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))`
     or : `@reverse(function(v) { return this.status === 1 ? v : '' })`
+11. @`recover` => define how to convert string vlaue to the attritube value from query
+12. `@format` alias to `@parse`
 
 # private function of entity from model
 
@@ -317,6 +319,43 @@ Named { loading: false, name: "tapo" }
 `named.reverse()` will get json object `{ name: 'tapo' }`
 
 especially useful for data lock in table
+
+# use this in parse function
+
+by default, tapo will parse attributes one by on as you defined.
+
+```
+@Entity()
+export class Tp extends Model {
+  constructor (source?: Record<string, unknown>) {
+    super()
+    this.merge(source)
+  }
+
+  @parse(function (this: Tp, v) {
+    console.log(v, this.id)
+    return v
+  })
+  @nullable()
+  @type(String)
+  @to()
+  key = ''
+
+  @parse((v) => {
+    console.log(v)
+    return v
+  })
+  @type(Number)
+  @to()
+  id = 0
+}
+
+new Tp().parse({ id: 1, key: '2' })
+
+output:
+1
+2 1
+```
 
 # method parameter check in runtime
 
