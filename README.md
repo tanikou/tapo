@@ -273,6 +273,47 @@ defaults.lightly = false
     or : `@reverse(function(v) { return this.status === 1 ? v : '' })`
 11. @`recover` => define how to convert string vlaue to the attritube value from query
 12. `@format` alias to `@parse`
+13. `@decorators` => define custom decorators.
+
+# custom decorators
+
+```
+import { Entity, Model, type, decorators } from 'tapo'
+
+@Entity()
+export class Tm extends Model {
+  constructor (source?: Record<string, unknown>) {
+    super()
+    this.merge(source)
+  }
+
+  @decorators({
+    max: () => 0
+  })
+  @type(Number)
+  id = 0
+
+  @decorators({
+    max: function (this: Tm) {
+      return this.id + 5
+    }
+  })
+  @type(String)
+  name = ''
+}
+```
+
+run:
+
+```
+new Tm().runDecorators('max')
+```
+
+get result
+
+```
+{name: 5, id: 0}
+```
 
 # private function of entity from model
 
@@ -280,6 +321,7 @@ defaults.lightly = false
 2. `entity.merge`(source), the parameter `source` can be a json object or a entity, this will set the attribute value of entity by source attr value (if the source has the same attribute)
 3. `entity.recover`(source), the parameter `source` can be a json object or a entity, normally use this function to recover entity from the url. this function will auto tranform prop data to the type of defined. eg: http://localhost/logs?name=tapo&page=1&size=10. create entity by `new LogQuery().recover({ name: 'tapo', page: '1', size: '10' })` get result `LogQuery { name: 'tapo', page: 1, size: 10 }`
 4. `entity.reverse()` transform entity to a json object
+5. `entity.runDecorators(attr: string)` run custom decorator
 
 # more
 
@@ -326,13 +368,13 @@ by default, tapo will parse attributes one by on as you defined.
 
 ```
 @Entity()
-export class Tp extends Model {
+export class Staff extends Model {
   constructor (source?: Record<string, unknown>) {
     super()
     this.merge(source)
   }
 
-  @parse(function (this: Tp, v) {
+  @parse(function (this: Staff, v) {
     console.log(v, this.id)
     return v
   })

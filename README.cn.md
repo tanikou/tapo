@@ -293,6 +293,47 @@ defaults.lightly = false
     例: `@reverse((v, me) => me.status === 1 ? moment(v).format('YYYYMMDD') : moment(v).format('YY-MM-DD'))` 或者使用 this 引用其他属性：`@reverse(function(v) { return this.status === 1 ? v : '' })`
 11. @`recover` => 定义如何将字符串值转换为属性值，如`@recover(Date)`或`@recover(v => new Date(Number(v)))`，例从 query 中`date[]=1655827200000&date[]=1656086400000`还原为`date: [new Date(1655827200000), new Date(1656086400000)]`。如果有指定`recover`则使用指定的类型转换，如果没有配置类型则用配置的类型进行初始化，没有配置则默认用属性的默认值的类型进行初始化，基础数据类型均可自动转换
 12. @`format` => 等价于@`parse`
+13. `@decorators` => 定义自定义装饰器规则
+
+# 自定义装饰
+
+```
+import { Entity, Model, type, decorators } from 'tapo'
+
+@Entity()
+export class Tm extends Model {
+  constructor (source?: Record<string, unknown>) {
+    super()
+    this.merge(source)
+  }
+
+  @decorators({
+    max: () => 0
+  })
+  @type(Number)
+  id = 0
+
+  @decorators({
+    max: function (this: Tm) {
+      return this.id + 5
+    }
+  })
+  @type(String)
+  name = ''
+}
+```
+
+执行:
+
+```
+new Tm().runDecorators('max')
+```
+
+结果：
+
+```
+{name: 5, id: 0}
+```
 
 # 从 Model 基类继续到的私有方法
 
@@ -300,6 +341,7 @@ defaults.lightly = false
 2. `entity.merge`(source), 参数 `source` 可能是 json 也可以是实体类, 用于其他地方的具有相同属性值覆盖到实体中，如表格组件提交的新的分页或排序数据。一般用于前端自己构造或覆盖属性值
 3. `entity.recover`(source), 通用用来将 url 中的参数还原给实体类. `recover` 将自动识别`type`定义的类型并转换成指定的类型. 如: http://localhost/logs?name=tapo&page=1&size=10. 用 URL 中的参数合并到实体 `new LogQuery().recover({ name: 'tapo', page: '1', size: '10' })` 得到结果 `LogQuery { name: 'tapo', page: 1, size: 10 }`
 4. `entity.reverse()` 将实体转换为 json 数据，一般用于提交给后端
+5. `entity.runDecorators(attr: string)` 执行自定义装饰器并得结果
 
 # 其他
 
@@ -340,19 +382,19 @@ Named { loading: false, name: "tapo" }
 
 一般在表格的行操作需要加防抖时特别好用
 
-# use this in parse function
+# 在 parse 中使用 this
 
 默认情况下将会按你定义的属性从上向下一个一个的进行转换属性值。但如果你在某个方法中使用了 this.xxx，则将会优化转换你引用到的 xxx 属性。注意不要相互交叉引用否则可能会出问题
 
 ```
 @Entity()
-export class Tp extends Model {
+export class Staff extends Model {
   constructor (source?: Record<string, unknown>) {
     super()
     this.merge(source)
   }
 
-  @parse(function (this: Tp, v) {
+  @parse(function (this: Staff, v) {
     console.log(v, this.id)
     return v
   })

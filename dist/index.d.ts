@@ -22,7 +22,7 @@ export class Model implements Record<string, unknown> {
 
   reverse(source?: any): any
 
-  decorators(name: string): unknown[]
+  runDecorators(name: string): Record<string, any>
 }
 
 export interface ModelConfig {
@@ -45,6 +45,10 @@ export interface ModelConfig {
   dep?: string[]
 }
 
+export interface CustomDecorator {
+  [key: Exclude<string, keyof ModelConfig>]: (me: Record<any, any>) => any
+}
+
 export interface ReverseOption {
   lightly?: boolean | undefined
   exclusion?: string[]
@@ -52,7 +56,7 @@ export interface ReverseOption {
 
 export function Entity(): any
 
-export function field(config: ModelConfig): any
+export function decorators(value?: ModelConfig | CustomDecorator): any
 
 export function format(value: (v: any, me: Record<any, any>) => any): any
 
@@ -78,9 +82,11 @@ export function omit(value?: boolean): any
 
 export function param(...value: any): any
 
-export function column(alue: Record<string, unknown>): any
+export function column(value: Record<string, unknown>): any
 
-export function form(alue: Record<string, unknown>): any
+export function form(value: Record<string, unknown>): any
+
+export function dep(attrs: string[]): any
 
 export function setMessageFormat(v: string): void
 

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.param = exports.converty = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.form = exports.column = exports.recover = exports.format = exports.parse = exports.enumeration = exports.from = exports.type = exports.field = exports.ModelError = exports.defaults = void 0;
+exports.setLogger = exports.setMessageFormat = exports.Entity = exports.Model = exports.param = exports.converty = exports.reverse = exports.omit = exports.to = exports.validator = exports.nullable = exports.form = exports.column = exports.recover = exports.format = exports.parse = exports.enumeration = exports.from = exports.type = exports.decorators = exports.ModelError = exports.defaults = void 0;
 /* eslint-disable */
 const storage_1 = __importDefault(require("./storage"));
 exports.defaults = {
@@ -41,12 +41,12 @@ class ModelError extends Error {
     }
 }
 exports.ModelError = ModelError;
-const field = (config) => {
+const decorators = (config) => {
     return function (target, name) {
         storage_1.default.entity(target.constructor).attr(name).setRule(config);
     };
 };
-exports.field = field;
+exports.decorators = decorators;
 /**
  * 定义数据类型
  * @param value String Number Boolean ...其他基础数据类型或实体类
@@ -86,7 +86,8 @@ exports.enumeration = enumeration;
 const parse = (value) => {
     return function (target, name) {
         const attr = storage_1.default.entity(target.constructor).attr(name);
-        const ref = (value.toString().match(/this\.[a-zA-Z\d_]+/g) || []);
+        const ref = (value.toString().match(/this\s*\.[a-zA-Z\d_]+/g) ||
+            []);
         const dep = ref.map((v) => v.replace(/^this\s*\./, ''));
         if (dep.length > 0) {
             attr.setRule({ dep });
@@ -351,26 +352,26 @@ class Model {
         }
         const isen = Object.getPrototypeOf(source).constructor ===
             Object.getPrototypeOf(this).constructor;
+        const attrs = storage_1.default.entity(this.constructor).attrs;
         if (isen) {
             this.doPrivateCopy(source);
         }
         else {
-            const attrs = storage_1.default.entity(this.constructor).attrs;
             attrs.forEach((attr) => {
                 this.doPrivateParse(attr, source);
             });
-            attrs.forEach((attr) => {
-                // 转换完成后再过validator避免没转换完而引起的数据值异常
-                if (attr.rules.validator) {
-                    ;
-                    (Array.isArray(attr.rules.validator)
-                        ? attr.rules.validator
-                        : [attr.rules.validator]).forEach((func) => {
-                        func.call(this, this[attr.name], this);
-                    });
-                }
-            });
         }
+        attrs.forEach((attr) => {
+            // 转换完成后再过validator避免没转换完而引起的数据值异常
+            if (attr.rules.validator) {
+                ;
+                (Array.isArray(attr.rules.validator)
+                    ? attr.rules.validator
+                    : [attr.rules.validator]).forEach((func) => {
+                    func.call(this, this[attr.name], this);
+                });
+            }
+        });
         return this;
     }
     /**
@@ -444,12 +445,17 @@ class Model {
         });
         return json;
     }
-    decorators(name) {
-        console.log(storage_1.default.entity(this.constructor));
-        return storage_1.default
-            .entity(this.constructor)
-            .attrs.map((attr) => attr.rules[name])
-            .filter((v) => v);
+    /**
+     * 支持自己祢装饰器关
+     * @param name 自字义装饰器名称
+     * @returns 执行结果数组
+     */
+    runDecorators(name) {
+        return storage_1.default.entity(this.constructor).attrs.reduce((res, attr) => {
+            const dec = attr.rules[name];
+            res[attr.name] = dec === null || dec === void 0 ? void 0 : dec.call(this, this);
+            return res;
+        }, {});
     }
 }
 exports.Model = Model;
