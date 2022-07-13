@@ -412,12 +412,14 @@ export class Staff extends Model {
   id = 0
 }
 
-new Tp().parse({ id: 1, key: '2' })
+new Staff().parse({ id: 1, key: '2' })
 
 输出:
 1
 2 1
 ```
+
+通常你可以用普通 function 定义 `@parse(function () { return this.min + this.max })`, 但是在 ts 中会有 any 报错提示： `'this' implicitly has type 'any' because it does not have a type annotation.`, 你可以用变量 this 去解决这个问题： `@parse(function (this: Staff, v) { return this.min + v })`。在类定义这使用箭头函数时 this 将永远不会是你想要的实体 this。
 
 # 方法执行时参数校验
 

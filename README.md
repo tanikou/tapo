@@ -392,12 +392,14 @@ export class Staff extends Model {
   id = 0
 }
 
-new Tp().parse({ id: 1, key: '2' })
+new Staff().parse({ id: 1, key: '2' })
 
 output:
 1
 2 1
 ```
+
+you can define @parse by normal function as `@parse(function () { return this.min + this.max })`, but in TypeScript you will get an eslint error `'this' implicitly has type 'any' because it does not have a type annotation.`, you can resovle this by `@parse(function (this: Staff, v) { return this.min + v })`
 
 # method parameter check in runtime
 
